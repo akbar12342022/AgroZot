@@ -55,9 +55,11 @@ export function firebaseErrorMessage(error) {
  * Qaytgan confirmation obyekti 2-qadamda kerak bo'ladi.
  */
 export async function sendSmsCode(phoneE164) {
+  // Raqam ichidagi bo'sh joylar Firebase'da "invalid-phone-number" xatosiga olib keladi
+  const formattedPhone = phoneE164.replace(/\s+/g, '');
   firebaseAuth.useDeviceLanguage();
   try {
-    return await signInWithPhoneNumber(firebaseAuth, phoneE164, getRecaptcha());
+    return await signInWithPhoneNumber(firebaseAuth, formattedPhone, getRecaptcha());
   } catch (error) {
     console.error('SMS kod yuborishda xatolik:', error);
     // reCAPTCHA sessiyasi kuygan bo'lishi mumkin — keyingi urinish uchun yangilaymiz

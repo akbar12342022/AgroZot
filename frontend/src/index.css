@@ -60,6 +60,13 @@ body {
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Firebase ko'rinmas reCAPTCHA ning o'ng pastdagi belgisini yashirish */
+.grecaptcha-badge {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* Line clamp utility */
 .line-clamp-2 {
   display: -webkit-box;

@@ -27,11 +27,11 @@ export default function BrandLogo({ variant = 'md', iconOnly = false, className 
         src="/assets/logo-clean.png"
         alt="AgroZot"
         draggable={false}
-        className={`${lg ? 'w-14 h-14' : 'w-12 h-12'} object-contain shrink-0`}
+        className={`${lg ? 'w-16 h-16' : 'w-12 h-12'} object-contain shrink-0`}
       />
       {!iconOnly && (
         <div className="flex flex-col">
-          <span className={`${lg ? 'text-3xl' : 'text-2xl'} font-extrabold leading-none tracking-tight text-brand`}>
+          <span className={`${lg ? 'text-4xl' : 'text-2xl'} font-extrabold leading-none tracking-tight text-brand`}>
             AgroZot
           </span>
           <span className={`${lg ? 'text-xs' : 'text-[10px]'} uppercase tracking-wider font-semibold text-brand-green mt-1`}>
