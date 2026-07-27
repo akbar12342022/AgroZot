@@ -2,7 +2,6 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const prisma = require('../utils/prisma');
-const firebaseAuth = require('../middleware/firebaseAuth');
 
 const router = express.Router();
 
@@ -17,6 +16,11 @@ const registerSchema = z.object({
     .trim()
     .min(2, "Ism kamida 2 ta harfdan iborat bo'lsin")
     .max(60, 'Ism 60 ta belgidan oshmasin'),
+  phone: z
+    .string({ required_error: 'Telefon raqam kiritilishi shart' })
+    .trim()
+    .min(9, "Telefon raqam noto'g'ri")
+    .max(20, "Telefon raqam noto'g'ri"),
   survey: z
     .object({
       role: z.string().trim().max(40).nullish(),
@@ -66,18 +70,20 @@ function publicUser(user) {
 
 /**
  * POST /register
- * Ro'yxatdan o'tish / kirish — Firebase Phone Auth bilan tasdiqlangan raqam orqali.
- * Telefon raqam so'rov tanasidan EMAS, tekshirilgan Firebase ID tokendan olinadi
- * (firebaseAuth middleware → req.firebasePhone). Raqam avval ro'yxatdan o'tgan
- * bo'lsa, o'sha hisobga kiritadi.
+ * Ro'yxatdan o'tish / kirish — SMS tasdiqlashsiz, ism va telefon raqamning o'zi bilan.
+ * Raqam bazada bo'lsa o'sha hisobga kiritadi, bo'lmasa yangi hisob yaratadi (upsert)
+ * va darhol JWT sessiya token qaytaradi.
  */
-router.post('/register', firebaseAuth, async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
-    const { name, survey } = registerSchema.parse(req.body);
+    const { name, phone, survey } = registerSchema.parse(req.body);
 
-    // Firebase E.164 formatida beradi (+998901234567) — bazadagi format bilan bir xil.
-    // O'zbekiston raqamlari normalizatsiyadan o'tadi, boshqalari asl holida saqlanadi.
-    const normalizedPhone = normalizePhone(req.firebasePhone) || req.firebasePhone;
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return res
+        .status(400)
+        .json({ error: "Telefon raqam noto'g'ri. Masalan: +998 90 123 45 67" });
+    }
 
     // So'rovnoma javobsiz kelgan kirishda avvalgi javoblar o'chirilmaydi
     const surveyData = sanitizeSurvey(survey);
