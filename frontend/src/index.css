@@ -1,0 +1,289 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Brend palitra — logotip ranglari */
+  --brand-primary: #0F3D4C; /* to'q teal */
+  --brand-primary-dark: #0A2E3A;
+  --brand-green: #16A34A; /* yashil aksent */
+  --brand-green-dark: #15803D;
+  --brand-sky: #0284C7; /* moviy aksent */
+
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #F1F5F9;
+  --border-subtle: rgba(15, 61, 76, 0.08);
+  --border-default: rgba(15, 61, 76, 0.14);
+  --text-primary: #0F3D4C;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --accent: #16A34A;
+  --accent-hover: #15803D;
+  --telegram-blue: #2AABEE;
+  --telegram-blue-dark: #229ED9;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  border: none;
+  text-align: left;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Card hover image zoom */
+.card-img-zoom {
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.group:hover .card-img-zoom {
+  transform: scale(1.08);
+}
+
+/* Smooth slide-up animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Pulse dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Sticky header glass */
+.glass-header {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(248, 250, 252, 0.88);
+}
+
+/* Bottom nav glass */
+.glass-nav {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+/* Image overlay gradient */
+.img-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Detail modal gallery */
+.gallery-container {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.gallery-container > * {
+  scroll-snap-align: start;
+}
+
+/* Category chip active glow */
+.chip-active {
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.35), 0 4px 12px rgba(22, 163, 74, 0.18);
+}
+
+/* Card shadow on hover */
+.card-hover-shadow {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+.card-hover-shadow:hover {
+  box-shadow: 0 8px 30px rgba(15, 61, 76, 0.14);
+  border-color: rgba(15, 61, 76, 0.18);
+  transform: translateY(-2px);
+}
+
+/* Region dropdown */
+.dropdown-menu {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Characteristics grid */
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.char-grid > div {
+  background: var(--bg-card);
+  padding: 12px 14px;
+}
+
+/* Action bar gradient border top */
+.action-bar {
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Telegram button gradient */
+.btn-telegram {
+  background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%);
+  transition: all 0.2s ease;
+}
+.btn-telegram:hover {
+  box-shadow: 0 4px 15px rgba(42, 171, 238, 0.3);
+  transform: translateY(-1px);
+}
+.btn-telegram:active {
+  transform: scale(0.98);
+}
+
+/* Phone button */
+.btn-phone {
+  background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+  transition: all 0.2s ease;
+}
+.btn-phone:hover {
+  box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+  transform: translateY(-1px);
+}
+.btn-phone:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════ Tungi rejim (html.dark) ═══════════════
+   Ilova Tailwind CDN utilitalarida yozilgan — tungi rejim uchun eng ko'p
+   ishlatiladigan utilitalar shu yerda markazlashgan holda qayta bo'yaladi.
+   Rejim <html> elementidagi .dark klassi bilan almashtiriladi. */
+html.dark {
+  color-scheme: dark;
+  --bg-primary: #0B1520;
+  --bg-secondary: #101D2B;
+  --bg-card: #111E2C;
+  --bg-elevated: #18293B;
+  --border-subtle: rgba(148, 163, 184, 0.12);
+  --border-default: rgba(148, 163, 184, 0.2);
+  --text-primary: #E6EDF3;
+  --text-secondary: #9FB0C3;
+  --text-muted: #64748B;
+}
+html.dark body { background: #0B1520; color: #E6EDF3; }
+
+/* Fonlar */
+html.dark .bg-brand-bg { background-color: #0B1520 !important; }
+html.dark .bg-white { background-color: #111E2C !important; }
+html.dark .bg-white\/95 { background-color: rgba(17, 30, 44, 0.95) !important; }
+html.dark .bg-slate-50 { background-color: #16273A !important; }
+html.dark .bg-slate-100 { background-color: #1B2C3F !important; }
+html.dark .bg-slate-200 { background-color: #24374C !important; }
+html.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.12) !important; }
+html.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.12) !important; }
+html.dark .hover\:bg-slate-50:hover { background-color: #16273A !important; }
+html.dark .hover\:bg-slate-100:hover { background-color: #1B2C3F !important; }
+html.dark .hover\:bg-slate-200:hover { background-color: #24374C !important; }
+html.dark .active\:bg-slate-100:active { background-color: #1B2C3F !important; }
+html.dark .hover\:bg-red-50:hover { background-color: rgba(239, 68, 68, 0.14) !important; }
+
+/* Matnlar */
+html.dark .text-brand { color: #E6EDF3 !important; }
+html.dark .text-slate-700 { color: #CBD5E1 !important; }
+html.dark .text-slate-600 { color: #B6C2D2 !important; }
+html.dark .hover\:text-slate-600:hover { color: #CBD5E1 !important; }
+html.dark .text-slate-500 { color: #93A5BA !important; }
+html.dark .text-slate-400 { color: #64748B !important; }
+html.dark .text-brand-green-dark { color: #4ADE80 !important; }
+html.dark .hover\:text-brand:hover { color: #E6EDF3 !important; }
+
+/* Chegaralar */
+html.dark .border-slate-100 { border-color: rgba(148, 163, 184, 0.1) !important; }
+html.dark .border-slate-200 { border-color: rgba(148, 163, 184, 0.16) !important; }
+html.dark .border-slate-300 { border-color: rgba(148, 163, 184, 0.26) !important; }
+html.dark .hover\:border-slate-300:hover { border-color: rgba(148, 163, 184, 0.3) !important; }
+html.dark .border-red-200 { border-color: rgba(239, 68, 68, 0.35) !important; }
+html.dark .border-amber-300 { border-color: rgba(245, 158, 11, 0.4) !important; }
+
+/* Gradient oxiri to'q teal — tungi fonda ko'rinmay qoladi, moviyga almashtiriladi */
+html.dark .to-brand { --tw-gradient-to: #0E7490 !important; }
+
+/* Shisha panellar */
+html.dark .glass-header { background: rgba(11, 21, 32, 0.88); }
+html.dark .glass-nav { background: rgba(16, 29, 43, 0.94); }
+html.dark .action-bar { background: rgba(16, 29, 43, 0.96); }
+html.dark .char-grid > div { background: #111E2C; }
+html.dark .card-hover-shadow:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* Badge styles */
+.badge-top {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: white;
+}
+.badge-zotdor {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803D;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+}
+.badge-emlangan {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284C7;
+  border: 1px solid rgba(2, 132, 199, 0.25);
+}

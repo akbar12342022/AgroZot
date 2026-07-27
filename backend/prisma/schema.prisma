@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  telegramId   BigInt?   @unique
+  firstName    String?
+  lastName     String?
+  username     String?
+  phone        String?   @unique
+  avatarUrl    String?
+  aiPlan       String    @default("none") // AI tarif: none | pro | plus
+  isVerified   Boolean   @default(false) // Admin tasdiqlagan profil (ko'k belgi)
+  aiImagesUsed Int       @default(0) // shu kundagi rasm tahlillari soni
+  aiImagesDate String? // hisoblagich qaysi kunga tegishli (YYYY-MM-DD, Toshkent)
+  // Onboarding so'rovnomasi javoblari
+  surveyRole      String? // farmer | buyer | butcher | curious
+  surveyInterests String[] @default([]) // cattle | sheep | horse | rabbit | poultry
+  surveySource    String? // instagram | telegram | youtube | friends
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  animals      Animal[]
+  messages     Message[]
+  chatsA       Chat[]    @relation("ChatUserA")
+  chatsB       Chat[]    @relation("ChatUserB")
+}
+
+model Animal {
+  id          Int      @id @default(autoincrement())
+  title       String
+  category    String
+  price       Float
+  description String?
+  images      String[]
+  location    String?
+  region      String?
+  district    String?
+  isTop       Boolean  @default(false)
+  views       Int      @default(0)
+  breed       String?
+  age         String?
+  gender      String?
+  weight      String?
+  vaccinated  Boolean?
+  attributes  Json?
+  status      String   @default("ACTIVE")
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+// Chat xabarlari: chatId = null — umumiy xona, aks holda shaxsiy suhbat
+model Message {
+  id        Int      @id @default(autoincrement())
+  type      String   @default("TEXT") // TEXT | IMAGE | VIDEO | AUDIO
+  content   String?
+  mediaUrl  String?
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  chatId    Int?
+  chat      Chat?    @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  readAt    DateTime? // shaxsiy suhbatda sherik o'qigan vaqt (✓✓ uchun)
+  createdAt DateTime @default(now())
+
+  @@index([chatId, id])
+}
+
+// 1-ga-1 shaxsiy suhbat (userAId < userBId — juftlik takrorlanmasligi uchun)
+model Chat {
+  id        Int       @id @default(autoincrement())
+  userAId   Int
+  userBId   Int
+  userA     User      @relation("ChatUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB     User      @relation("ChatUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userAId, userBId])
+}

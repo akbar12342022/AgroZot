@@ -1,0 +1,22 @@
+# Netlify configuration — AgroZot frontend (Vite app in ./frontend)
+# Used by git-based deploys and `netlify deploy` (CLI).
+# NOTE: set VITE_API_URL in Netlify UI (Site configuration → Environment variables)
+# to your public backend URL, otherwise the app falls back to http://localhost:3000.
+
+[build]
+  # All paths below are relative to this base directory.
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 requires Node ^20.19 or >=22.12
+  NODE_VERSION = "22"
+
+# SPA fallback: serve index.html for every route so client-side
+# navigation and hard refreshes never 404. (Duplicated in
+# frontend/public/_redirects for drag-and-drop deploys of dist/.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

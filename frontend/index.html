@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/assets/logo-clean.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="description" content="AgroZot — O'zbekiston chorvachilik bozori. Hayvon, yem-hashak sotish va sotib olish, chorvadorlar chati va AI yordamchi." />
+    <meta name="theme-color" content="#F8FAFC" />
+    <title>AgroZot — Chorvachilik bozori</title>
+    <script>
+      // Tungi rejim — birinchi chizishdan OLDIN html ga .dark qo'yiladi ("yalt" etmasligi uchun)
+      (function () {
+        try {
+          if (localStorage.getItem('agrozot_theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#0B1520');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Brend palitra — logotip ranglariga mos (CDN Tailwind konfiguratsiyasi shu yerda)
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                DEFAULT: '#0F3D4C', // to'q teal — sarlavha, asosiy tugma, navbar
+                dark: '#0A2E3A', // teal hover
+                green: '#16A34A', // yashil — aktiv holat, "E'lon", muvaffaqiyat
+                'green-dark': '#15803D', // yashil hover
+                sky: '#0284C7', // moviy — badge va ikkilamchi aksentlar
+                bg: '#F8FAFC', // sahifa foni
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#F8FAFC] m-0 p-0 overflow-x-hidden text-[#0F3D4C] font-['Inter']">
+    <div id="root" class="w-full flex justify-center items-center min-h-screen"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
