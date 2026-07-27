@@ -5,7 +5,7 @@ const prisma = require('../utils/prisma');
 
 const router = express.Router();
 
-const AI_PLANS = ['none', 'pro', 'plus'];
+const AI_PLANS = ['STANDARD', 'PRO', 'PREMIUM'];
 const PRO_DAILY_IMAGE_LIMIT = 5;
 
 /** Toshkent (UTC+5) bo'yicha bugungi sana */
@@ -61,6 +61,7 @@ router.get('/users', async (req, res) => {
         username: true,
         phone: true,
         aiPlan: true,
+        aiUsageCount: true,
         isVerified: true,
         aiImagesUsed: true,
         aiImagesDate: true,
@@ -79,7 +80,7 @@ router.get('/users', async (req, res) => {
         activeAnimals: _count.animals,
         // Bugungi rasm tahlillari (kun almashgan bo'lsa 0)
         aiImagesToday: aiImagesDate === today ? aiImagesUsed : 0,
-        aiImageLimit: u.aiPlan === 'pro' ? PRO_DAILY_IMAGE_LIMIT : null,
+        aiImageLimit: u.aiPlan === 'PRO' ? PRO_DAILY_IMAGE_LIMIT : null,
       })),
       total: users.length,
     });
@@ -91,7 +92,7 @@ router.get('/users', async (req, res) => {
 
 /**
  * PUT /users/:id/plan
- * Foydalanuvchi AI tarifini o'zgartirish. Body: { plan: 'none' | 'pro' | 'plus' }
+ * Foydalanuvchi AI tarifini o'zgartirish. Body: { plan: 'STANDARD' | 'PRO' | 'PREMIUM' }
  */
 router.put('/users/:id/plan', async (req, res) => {
   try {
@@ -100,7 +101,9 @@ router.put('/users/:id/plan', async (req, res) => {
 
     const plan = req.body?.plan;
     if (!AI_PLANS.includes(plan)) {
-      return res.status(400).json({ error: "Tarif faqat 'none', 'pro' yoki 'plus' bo'lishi mumkin" });
+      return res
+        .status(400)
+        .json({ error: "Tarif faqat 'STANDARD', 'PRO' yoki 'PREMIUM' bo'lishi mumkin" });
     }
 
     const user = await prisma.user.update({

@@ -38,7 +38,13 @@ const ALLOWED_ORIGINS = [
 
 app.use(
   cors({
-    origin: ALLOWED_ORIGINS,
+    // origin'siz so'rovlar (curl, health-check) o'tkaziladi; brauzer so'rovlari esa
+    // faqat ro'yxatdagi manzillardan qabul qilinadi — rad etilganlari logga yoziladi.
+    origin(origin, callback) {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      console.warn(`CORS rad etildi: ${origin} (FRONTEND_URL ni tekshiring)`);
+      callback(new Error('CORS: ruxsat etilmagan manzil'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
   })

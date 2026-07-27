@@ -24,8 +24,8 @@ const PLANS = [
     },
   },
   {
-    id: 'plus',
-    name: 'Plus',
+    id: 'premium',
+    name: 'Premium',
     icon: Crown,
     tagline: 'Professional chorvadorlar uchun',
     badge: 'ENG YAXSHI TAKLIF',
@@ -90,7 +90,7 @@ export default function PricingModal({ contact, onClose }) {
           </h2>
           <p className="text-xs md:text-sm text-slate-500 mt-2 max-w-md leading-relaxed">
             AI yordamchi — veterinariya maslahatlari, hayvon rasmidan vazn va bozor narxini
-            baholash. Foydalanish uchun tarifni tanlang.
+            baholash. Bepul 3 ta savol tugagach, davom etish uchun tarif tanlang.
           </p>
         </div>
 

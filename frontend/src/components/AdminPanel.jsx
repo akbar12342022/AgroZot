@@ -24,12 +24,12 @@ import {
 const KEY_STORAGE = 'agrozot_admin_key';
 
 const PLAN_STYLES = {
-  none: 'bg-white border-slate-300 text-slate-500',
-  pro: 'bg-brand-green/10 border-brand-green/40 text-brand-green-dark',
-  plus: 'bg-amber-50 border-amber-300 text-amber-600',
+  STANDARD: 'bg-white border-slate-300 text-slate-500',
+  PRO: 'bg-brand-green/10 border-brand-green/40 text-brand-green-dark',
+  PREMIUM: 'bg-amber-50 border-amber-300 text-amber-600',
 };
 
-const PLAN_LABELS = { none: 'Tarif yo\'q', pro: 'Pro', plus: 'Plus' };
+const PLAN_LABELS = { STANDARD: 'Standard', PRO: 'Pro', PREMIUM: 'Premium' };
 
 function fmtDate(d) {
   return new Date(d).toLocaleDateString('uz', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -97,12 +97,12 @@ function PlanSelect({ user, onChange, busy }) {
         disabled={busy}
         onChange={(e) => onChange(user, e.target.value)}
         className={`appearance-none cursor-pointer rounded-lg border pl-3 pr-7 py-1.5 text-xs font-semibold focus:outline-none focus:border-brand-green transition-colors disabled:opacity-50 ${
-          PLAN_STYLES[user.aiPlan] || PLAN_STYLES.none
+          PLAN_STYLES[user.aiPlan] || PLAN_STYLES.STANDARD
         }`}
       >
-        <option value="none" className="bg-white text-slate-700">Tarif yo'q</option>
-        <option value="pro" className="bg-white text-slate-700">Pro — 5 rasm/kun</option>
-        <option value="plus" className="bg-white text-slate-700">Plus — cheksiz</option>
+        <option value="STANDARD" className="bg-white text-slate-700">Standard — 3 bepul savol</option>
+        <option value="PRO" className="bg-white text-slate-700">Pro — 5 rasm/kun</option>
+        <option value="PREMIUM" className="bg-white text-slate-700">Premium — cheksiz</option>
       </select>
       <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] opacity-60">
         {busy ? <Loader2 size={11} className="animate-spin" /> : '▼'}
@@ -448,7 +448,7 @@ export default function AdminPanel() {
                       </td>
                       <td className="px-4 py-3 text-center text-xs text-slate-600">{u.activeAnimals}</td>
                       <td className="px-4 py-3 text-center">
-                        {u.aiPlan === 'pro' ? (
+                        {u.aiPlan === 'PRO' ? (
                           <span
                             className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
                               u.aiImagesToday >= (u.aiImageLimit || 5) ? 'text-red-500' : 'text-slate-600'
@@ -456,10 +456,17 @@ export default function AdminPanel() {
                           >
                             <ImagePlus size={11} /> {u.aiImagesToday}/{u.aiImageLimit || 5}
                           </span>
-                        ) : u.aiPlan === 'plus' ? (
+                        ) : u.aiPlan === 'PREMIUM' ? (
                           <span className="text-[11px] text-amber-600 font-semibold">∞</span>
                         ) : (
-                          <span className="text-[11px] text-slate-400">—</span>
+                          <span
+                            className={`text-[11px] font-semibold ${
+                              (u.aiUsageCount ?? 0) >= 3 ? 'text-red-500' : 'text-slate-500'
+                            }`}
+                            title="Bepul savollar (jami 3 ta)"
+                          >
+                            {Math.min(u.aiUsageCount ?? 0, 3)}/3
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">

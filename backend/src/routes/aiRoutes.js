@@ -22,24 +22,41 @@ if (HAS_CLAUDE) {
   anthropicClient = new Anthropic();
 }
 
-const CLAUDE_MODEL = 'claude-opus-4-8';
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 
-// ═══ AI tariflar ═══
-// none — AI yopiq; pro — matn cheksiz, rasm kuniga 5 ta; plus — hammasi cheksiz.
+// ═══ AI tariflar (freemium) ═══
+// STANDARD — bepul: jami 3 ta savol, tez/arzon model; PRO — matn cheksiz,
+// rasm kuniga 5 ta; PREMIUM — hammasi cheksiz. PRO/PREMIUM kuchli modelda ishlaydi.
+const FREE_QUESTION_LIMIT = 3;
 const PRO_DAILY_IMAGE_LIMIT = 5;
 const ADMIN_CONTACT = process.env.ADMIN_CONTACT || 'https://t.me/afaridshop';
+
+// Tarifga qarab model tanlash. Eslatma: eski claude-3-* modellari muomaladan
+// chiqarilgan (404 qaytaradi); claude-sonnet-5 — Sonnet'ning eng yangi avlodi
+// (claude-sonnet-4-5 avvalgi avlod). Model ID'lari sana qo'shimchasisiz yoziladi.
+const PLAN_MODELS = {
+  STANDARD: 'claude-haiku-4-5', // tez va arzon
+  PRO: 'claude-sonnet-5', // eng yangi Sonnet — kuchli va samarali
+  PREMIUM: 'claude-sonnet-5', // eng yangi Sonnet — kuchli va samarali
+};
+
+/** Eski qiymatlarni (none/pro/plus) yangi nomlarga keltirish — himoya qatlami */
+function normalizePlan(plan) {
+  const map = { none: 'STANDARD', pro: 'PRO', plus: 'PREMIUM' };
+  const normalized = map[plan] || plan;
+  return PLAN_MODELS[normalized] ? normalized : 'STANDARD';
+}
 
 /** Toshkent (UTC+5) bo'yicha bugungi sana — kunlik limit shu sana bo'yicha nollanadi */
 function tashkentToday() {
   return new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-/** Foydalanuvchining bugungi rasm-tahlil holati */
-function imageUsage(user) {
+/** Foydalanuvchining bugungi rasm-tahlil holati (plan — normallashtirilgan tarif) */
+function imageUsage(user, plan) {
   const today = tashkentToday();
   const used = user.aiImagesDate === today ? user.aiImagesUsed : 0;
-  const limit = user.aiPlan === 'pro' ? PRO_DAILY_IMAGE_LIMIT : null; // null — cheksiz
+  const limit = plan === 'PRO' ? PRO_DAILY_IMAGE_LIMIT : null; // null — cheksiz
   const remaining = limit === null ? null : Math.max(0, limit - used);
   return { today, used, limit, remaining };
 }
@@ -125,7 +142,7 @@ function sanitizeHistory(history) {
     .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
 }
 
-async function askClaude({ message, history, imageUrl }) {
+async function askClaude({ message, history, imageUrl, model }) {
   const stats = await getMarketStats();
   const system = buildSystemPrompt(statsToText(stats));
 
@@ -144,9 +161,13 @@ async function askClaude({ message, history, imageUrl }) {
   const messages = [...sanitizeHistory(history), { role: 'user', content }];
 
   const response = await anthropicClient.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 2000,
-    thinking: { type: 'adaptive' },
+    model,
+    // Sonnet 5 da thinking ham max_tokens hisobiga kiradi — javob kesilib
+    // qolmasligi uchun kengroq chegara (chegara ≠ sarf, faqat yuqori qopqoq)
+    max_tokens: 4000,
+    // Adaptive thinking Sonnet 5 va Opus'da ishlaydi; Haiku 4.5 uni qabul
+    // qilmaydi (400 qaytaradi) — shuning uchun Haiku'da yuborilmaydi
+    ...(model.startsWith('claude-haiku') ? {} : { thinking: { type: 'adaptive' } }),
     system,
     messages,
   });
@@ -203,18 +224,28 @@ router.post('/chat', auth, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(401).json({ error: 'Foydalanuvchi topilmadi' });
 
-    if (user.aiPlan !== 'pro' && user.aiPlan !== 'plus') {
+    const plan = normalizePlan(user.aiPlan);
+
+    // STANDARD (bepul) tarif: jami FREE_QUESTION_LIMIT ta savol
+    if (plan === 'STANDARD' && user.aiUsageCount >= FREE_QUESTION_LIMIT) {
       return res.status(403).json({
-        error: "AI yordamchidan foydalanish uchun tarif sotib oling.",
-        code: 'NO_PLAN',
+        success: false,
+        message: 'Limit reached. Please upgrade to a paid plan.',
+        error: `Bepul ${FREE_QUESTION_LIMIT} ta savol tugadi. Davom etish uchun Pro yoki Premium tarifini ulang.`,
+        code: 'LIMIT_REACHED',
+        plan,
+        questionLimit: FREE_QUESTION_LIMIT,
+        remainingQuestions: 0,
         contact: ADMIN_CONTACT,
       });
     }
 
-    const usage = imageUsage(user);
+    const usage = imageUsage(user, plan);
     if (imageUrl && usage.remaining !== null && usage.remaining <= 0) {
       return res.status(403).json({
-        error: `Bugungi rasm tahlili limiti tugadi (kuniga ${usage.limit} ta). Ertaga qayta urinib ko'ring yoki Plus tarifiga o'ting.`,
+        success: false,
+        message: 'Daily image limit reached.',
+        error: `Bugungi rasm tahlili limiti tugadi (kuniga ${usage.limit} ta). Ertaga qayta urinib ko'ring yoki Premium tarifiga o'ting.`,
         code: 'IMAGE_LIMIT',
         imageLimit: usage.limit,
         remainingImages: 0,
@@ -222,31 +253,51 @@ router.post('/chat', auth, async (req, res) => {
       });
     }
 
-    /** Javobga tarif holatini qo'shish (rasm ishlatilgan bo'lsa hisoblab) */
-    const planInfo = (imageConsumed) => {
-      const used = usage.used + (imageConsumed ? 1 : 0);
+    /** Javobga tarif holatini qo'shish (savol/rasm ishlatilgan bo'lsa hisoblab) */
+    const planInfo = (questionConsumed, imageConsumed) => {
+      const imagesUsed = usage.used + (imageConsumed ? 1 : 0);
+      const questionsUsed = user.aiUsageCount + (questionConsumed ? 1 : 0);
       return {
-        plan: user.aiPlan,
+        plan,
         imageLimit: usage.limit,
-        remainingImages: usage.limit === null ? null : Math.max(0, usage.limit - used),
+        remainingImages: usage.limit === null ? null : Math.max(0, usage.limit - imagesUsed),
+        questionLimit: plan === 'STANDARD' ? FREE_QUESTION_LIMIT : null,
+        remainingQuestions:
+          plan === 'STANDARD' ? Math.max(0, FREE_QUESTION_LIMIT - questionsUsed) : null,
       };
     };
 
     if (HAS_CLAUDE) {
       try {
-        const reply = await askClaude({ message: trimmed, history, imageUrl });
-        // Limit faqat haqiqiy tahlil uchun sarflanadi
+        // Model tarifga qarab tanlanadi: STANDARD — tez/arzon, PRO/PREMIUM — kuchli
+        const reply = await askClaude({
+          message: trimmed,
+          history,
+          imageUrl,
+          model: PLAN_MODELS[plan],
+        });
+        // Hisoblagichlar faqat muvaffaqiyatli javobdan keyin oshiriladi
         if (imageUrl) await consumeImageQuota(user, usage);
-        return res.json({ reply, suggestions: pickSuggestions(), engine: 'claude', ...planInfo(!!imageUrl) });
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { aiUsageCount: { increment: 1 } },
+        });
+        return res.json({
+          success: true,
+          reply,
+          suggestions: pickSuggestions(),
+          engine: 'claude',
+          ...planInfo(true, !!imageUrl),
+        });
       } catch (error) {
         console.error('Claude xatosi, bilim bazasiga o\'tildi:', error.message);
         const fallback = await askKnowledgeBase(trimmed, !!imageUrl);
-        return res.json({ ...fallback, engine: 'kb', ...planInfo(false) });
+        return res.json({ success: true, ...fallback, engine: 'kb', ...planInfo(false, false) });
       }
     }
 
     const result = await askKnowledgeBase(trimmed, !!imageUrl);
-    res.json({ ...result, engine: 'kb', ...planInfo(false) });
+    res.json({ success: true, ...result, engine: 'kb', ...planInfo(false, false) });
   } catch (error) {
     console.error('AI chat xatosi:', error);
     res.status(500).json({ error: 'AI yordamchida xatolik yuz berdi' });
@@ -263,12 +314,17 @@ router.get('/access', auth, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(401).json({ error: 'Foydalanuvchi topilmadi' });
 
-    const usage = imageUsage(user);
+    const plan = normalizePlan(user.aiPlan);
+    const usage = imageUsage(user, plan);
     res.json({
-      plan: user.aiPlan,
+      plan,
       imageLimit: usage.limit,
       imagesUsedToday: usage.used,
       remainingImages: usage.remaining,
+      questionLimit: plan === 'STANDARD' ? FREE_QUESTION_LIMIT : null,
+      questionsUsed: user.aiUsageCount,
+      remainingQuestions:
+        plan === 'STANDARD' ? Math.max(0, FREE_QUESTION_LIMIT - user.aiUsageCount) : null,
       contact: ADMIN_CONTACT,
       engine: HAS_CLAUDE ? 'claude' : 'kb',
       vision: HAS_CLAUDE,

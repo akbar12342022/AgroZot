@@ -285,17 +285,17 @@ export default function ProfileTab({
               </p>
             )}
             <div className="mt-2">
-              {me?.aiPlan === 'plus' ? (
+              {me?.aiPlan === 'PREMIUM' ? (
                 <span className="px-2 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-600 text-[10px] font-extrabold tracking-wide">
-                  AI PLUS — cheksiz
+                  AI PREMIUM — cheksiz
                 </span>
-              ) : me?.aiPlan === 'pro' ? (
+              ) : me?.aiPlan === 'PRO' ? (
                 <span className="px-2 py-0.5 rounded-md bg-brand-green/10 border border-brand-green/40 text-brand-green-dark text-[10px] font-extrabold tracking-wide">
                   AI PRO
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded-md bg-slate-200 border border-slate-200 text-slate-500 text-[10px] font-semibold">
-                  AI tarif ulanmagan
+                  AI STANDARD — 3 bepul savol
                 </span>
               )}
             </div>

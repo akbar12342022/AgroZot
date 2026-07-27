@@ -159,13 +159,16 @@ function MainApp({ user, onLogout, showToast, toast }) {
           plan: data.plan,
           imageLimit: data.imageLimit ?? null,
           remainingImages: data.remainingImages ?? null,
+          questionLimit: data.questionLimit ?? null,
+          remainingQuestions: data.remainingQuestions ?? null,
         }));
       }
     } catch (err) {
-      if (err.code === 'NO_PLAN') {
+      if (err.code === 'LIMIT_REACHED') {
         setAiAccessInfo((prev) => ({
           ...(prev || {}),
-          plan: 'none',
+          plan: 'STANDARD',
+          remainingQuestions: 0,
           contact: err.data?.contact || prev?.contact,
         }));
         setShowPricing(true);
@@ -196,9 +199,13 @@ function MainApp({ user, onLogout, showToast, toast }) {
     }
   };
 
+  // STANDARD (bepul) tarifda 3 ta savol tugagach AI bo'limi yopiladi
+  const aiLocked =
+    aiAccessInfo?.plan === 'STANDARD' && aiAccessInfo?.remainingQuestions === 0;
+
   const handleTabChange = (tab) => {
-    // Tarifsiz foydalanuvchi AI bo'limini ochsa — tariflar oynasi
-    if (tab === 'ai' && aiAccessInfo?.plan === 'none') {
+    // Bepul savollari tugagan foydalanuvchi AI bo'limini ochsa — tariflar oynasi
+    if (tab === 'ai' && aiLocked) {
       setShowPricing(true);
       return;
     }
@@ -206,14 +213,14 @@ function MainApp({ user, onLogout, showToast, toast }) {
     setActiveTab(tab);
   };
 
-  // AI bo'limida turganda tarif 'none' bo'lib qolsa ham oyna ochiq turadi
-  const pricingOpen = showPricing || (activeTab === 'ai' && aiAccessInfo?.plan === 'none');
+  // AI bo'limida turganda limit tugab qolsa ham oyna ochiq turadi
+  const pricingOpen = showPricing || (activeTab === 'ai' && aiLocked);
   const closePricing = () => {
     setShowPricing(false);
-    if (activeTab === 'ai' && aiAccessInfo?.plan === 'none') setActiveTab('home');
+    if (activeTab === 'ai' && aiLocked) setActiveTab('home');
   };
 
-  const isPro = aiAccessInfo?.plan === 'pro';
+  const isPro = aiAccessInfo?.plan === 'PRO';
   const outOfImages = isPro && aiAccessInfo?.remainingImages === 0;
 
   const handleEditListing = (item) => {
@@ -371,8 +378,8 @@ function MainApp({ user, onLogout, showToast, toast }) {
             </motion.div>
           )}
 
-          {/* ── AI yordamchi: tarifsiz holat ── */}
-          {activeTab === 'ai' && aiAccessInfo?.plan === 'none' && (
+          {/* ── AI yordamchi: bepul limit tugagan holat ── */}
+          {activeTab === 'ai' && aiLocked && (
             <motion.div
               key="ai-locked"
               initial={{ opacity: 0 }}
@@ -388,10 +395,10 @@ function MainApp({ user, onLogout, showToast, toast }) {
                   <Lock size={14} />
                 </span>
               </div>
-              <h2 className="text-lg font-bold text-brand mb-2">AI yordamchi — tarif bilan ishlaydi</h2>
+              <h2 className="text-lg font-bold text-brand mb-2">Bepul savollaringiz tugadi</h2>
               <p className="text-xs text-slate-500 leading-relaxed max-w-xs mb-6">
-                Veterinariya maslahatlari, hayvon rasmidan vazn va bozor narxini baholash uchun Pro
-                yoki Plus tarifini ulang.
+                Davom etish — veterinariya maslahatlari, hayvon rasmidan vazn va bozor narxini
+                baholash uchun Pro yoki Premium tarifini ulang.
               </p>
               <button
                 onClick={() => setShowPricing(true)}
@@ -403,7 +410,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
           )}
 
           {/* ── AI yordamchi ── */}
-          {activeTab === 'ai' && aiAccessInfo?.plan !== 'none' && (
+          {activeTab === 'ai' && !aiLocked && (
             <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full">
               <div className="flex items-center gap-3 p-4 border-b border-slate-200">
                 <div className="w-10 h-10 rounded-full bg-brand-green/10 border border-brand-green/40 flex items-center justify-center text-brand-green-dark">
@@ -412,9 +419,9 @@ function MainApp({ user, onLogout, showToast, toast }) {
                 <div>
                   <h2 className="font-bold text-sm text-brand flex items-center gap-1.5">
                     AgroZot AI
-                    {aiAccessInfo?.plan === 'plus' && (
+                    {aiAccessInfo?.plan === 'PREMIUM' && (
                       <span className="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-600 text-[9px] font-extrabold tracking-wider">
-                        PLUS
+                        PREMIUM
                       </span>
                     )}
                     {isPro && (
@@ -425,11 +432,13 @@ function MainApp({ user, onLogout, showToast, toast }) {
                   </h2>
                   <p className="text-[11px] text-brand-green-dark flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-brand-green" />
-                    {aiAccessInfo?.plan === 'plus'
+                    {aiAccessInfo?.plan === 'PREMIUM'
                       ? 'Cheksiz suhbat va rasm tahlili'
                       : isPro && aiAccessInfo?.remainingImages != null
                         ? `Bugun ${aiAccessInfo.remainingImages} ta rasm tahlili qoldi`
-                        : 'Har qanday savolga javob beradi'}
+                        : aiAccessInfo?.plan === 'STANDARD' && aiAccessInfo?.remainingQuestions != null
+                          ? `Bepul: ${aiAccessInfo.remainingQuestions} ta savol qoldi`
+                          : 'Har qanday savolga javob beradi'}
                   </p>
                 </div>
                 {messages.length > 1 && (

@@ -1,7 +1,8 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-// Production buildda API manzili localhost bo'lib qolsa, sabab darhol konsolda ko'rinsin
-if (import.meta.env.PROD && /localhost|127\.0\.0\.1/.test(API_URL)) {
+// Production buildda API manzili localhost yoki to'ldirilmagan namuna bo'lib qolsa,
+// sabab darhol konsolda ko'rinsin
+if (import.meta.env.PROD && /localhost|127\.0\.0\.1|REPLACE-WITH/.test(API_URL)) {
   console.error(
     `[AgroZot] VITE_API_URL xato: "${API_URL}". Netlify'da Site configuration → ` +
       "Environment variables bo'limiga backend'ning ochiq HTTPS manzilini qo'shib, qayta deploy qiling."

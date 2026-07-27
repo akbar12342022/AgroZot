@@ -15,7 +15,8 @@ model User {
   username     String?
   phone        String?   @unique
   avatarUrl    String?
-  aiPlan       String    @default("none") // AI tarif: none | pro | plus
+  aiPlan       String    @default("STANDARD") // AI tarif: STANDARD (bepul, 3 savol) | PRO | PREMIUM
+  aiUsageCount Int       @default(0) // jami berilgan AI savollar soni (STANDARD limiti shu bo'yicha)
   isVerified   Boolean   @default(false) // Admin tasdiqlagan profil (ko'k belgi)
   aiImagesUsed Int       @default(0) // shu kundagi rasm tahlillari soni
   aiImagesDate String? // hisoblagich qaysi kunga tegishli (YYYY-MM-DD, Toshkent)
