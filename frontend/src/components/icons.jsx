@@ -105,19 +105,19 @@ export function VerifiedBadge({ size = 14, className = '' }) {
   );
 }
 
-/** AgroZot logo belgisi — barg ichida tuyoq izi */
+/** Chorvabozor logo belgisi — barg ichida tuyoq izi */
 export function LogoIcon({ size = 32, className = '' }) {
   return (
     <svg viewBox="0 0 48 48" width={size} height={size} fill="none" className={className}>
       <defs>
-        <linearGradient id="agrozot-g" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="chorvabozor-g" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#34D399" />
           <stop offset="100%" stopColor="#0D9488" />
         </linearGradient>
       </defs>
       <path
         d="M24 3C12 3 4 11 4 23c0 13 9 21 20 22 11-1 20-9 20-22C44 11 36 3 24 3Z"
-        fill="url(#agrozot-g)"
+        fill="url(#chorvabozor-g)"
       />
       <path
         d="M18 20c0-2.2 1.3-4 3-4s3 1.8 3 4-1.3 4-3 4-3-1.8-3-4Zm12-4c1.7 0 3 1.8 3 4s-1.3 4-3 4-3-1.8-3-4 1.3-4 3-4ZM17.5 30.5c1.5-2.5 4-4 6.5-4s5 1.5 6.5 4c1 1.7.4 3.9-1.3 4.9-1.6.9-3.4.6-5.2.6s-3.6.3-5.2-.6c-1.7-1-2.3-3.2-1.3-4.9Z"

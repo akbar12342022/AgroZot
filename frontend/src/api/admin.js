@@ -33,3 +33,15 @@ export const adminDeleteUser = (key, userId) =>
     method: 'DELETE',
     ...withKey(key),
   });
+
+/** Kelgan shikoyatlar ro'yxati (status: 'OPEN' | 'RESOLVED' | '') */
+export const adminReports = (key, status = '') =>
+  request(`/api/admin/reports${status ? `?status=${status}` : ''}`, withKey(key));
+
+/** Shikoyatga javob berish — foydalanuvchiga support chatidan xabar boradi */
+export const adminReplyReport = (key, reportId, reply) =>
+  request(`/api/admin/reports/${reportId}/reply`, {
+    method: 'POST',
+    body: { reply },
+    ...withKey(key),
+  });

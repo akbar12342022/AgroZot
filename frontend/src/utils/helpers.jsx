@@ -34,7 +34,7 @@ export function categoryPlaceholder() {
     `<ellipse cx='18' cy='6' rx='4' ry='5.5'/>` +
     `<path d='M4 19c2-4 5-6 8-6s6 2 8 6c1.4 2.4.5 5.4-2 6.7-2.2 1.2-4.4.8-6 .8s-3.8.4-6-.8c-2.5-1.3-3.4-4.3-2-6.7Z'/>` +
     `</g>` +
-    `<text x='400' y='430' font-family='Inter,sans-serif' font-size='24' fill='#3d4660' text-anchor='middle'>AgroZot</text>` +
+    `<text x='400' y='430' font-family='Inter,sans-serif' font-size='24' fill='#3d4660' text-anchor='middle'>Chorvabozor</text>` +
     `</svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

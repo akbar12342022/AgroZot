@@ -86,7 +86,7 @@ export default function PricingModal({ contact, onClose }) {
             <Sparkles size={26} />
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-brand tracking-tight">
-            AgroZot AI tariflari
+            Chorvabozor AI tariflari
           </h2>
           <p className="text-xs md:text-sm text-slate-500 mt-2 max-w-md leading-relaxed">
             AI yordamchi — veterinariya maslahatlari, hayvon rasmidan vazn va bozor narxini

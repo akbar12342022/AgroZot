@@ -18,6 +18,7 @@ model User {
   aiPlan       String    @default("STANDARD") // AI tarif: STANDARD (bepul, 3 savol) | PRO | PREMIUM
   aiUsageCount Int       @default(0) // jami berilgan AI savollar soni (STANDARD limiti shu bo'yicha)
   isVerified   Boolean   @default(false) // Admin tasdiqlagan profil (ko'k belgi)
+  isSupport    Boolean   @default(false) // "Qo'llab-quvvatlash (Admin)" maxsus akkaunti
   aiImagesUsed Int       @default(0) // shu kundagi rasm tahlillari soni
   aiImagesDate String? // hisoblagich qaysi kunga tegishli (YYYY-MM-DD, Toshkent)
   // Onboarding so'rovnomasi javoblari
@@ -30,6 +31,8 @@ model User {
   messages     Message[]
   chatsA       Chat[]    @relation("ChatUserA")
   chatsB       Chat[]    @relation("ChatUserB")
+  reports      Report[]  @relation("Reporter")
+  pushSubscriptions PushSubscription[]
 }
 
 model Animal {
@@ -68,9 +71,44 @@ model Message {
   chatId    Int?
   chat      Chat?    @relation(fields: [chatId], references: [id], onDelete: Cascade)
   readAt    DateTime? // shaxsiy suhbatda sherik o'qigan vaqt (✓✓ uchun)
+  isDelivered Boolean @default(true) // serverga yetib bordi (bitta ✓)
+  isRead    Boolean  @default(false) // sherik o'qidi (ikkita ✓✓)
+  // Reply (javob) — shu xabar qaysi xabarga javoban yozilgan
+  replyToId Int?
+  replyTo   Message?  @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReply")
   createdAt DateTime @default(now())
 
   @@index([chatId, id])
+}
+
+// Foydalanuvchi shikoyatlari (Report) — admin panelda ko'riladi va javob beriladi
+model Report {
+  id         Int      @id @default(autoincrement())
+  reporterId Int
+  reporter   User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType String   @default("OTHER") // ANIMAL | USER | OTHER
+  targetId   Int? // e'lon yoki foydalanuvchi IDsi (agar tegishli bo'lsa)
+  reason     String // shikoyat matni
+  status     String   @default("OPEN") // OPEN | RESOLVED
+  adminReply String? // admin javobi (foydalanuvchiga yuborilgan)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([status, id])
+}
+
+// Web Push obunalari (Firebase o'rniga — Service Worker + VAPID)
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // 1-ga-1 shaxsiy suhbat (userAId < userBId — juftlik takrorlanmasligi uchun)

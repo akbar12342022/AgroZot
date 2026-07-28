@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ImagePlus, X, CheckCircle2, Loader2, ChevronDown } from 'lucide-react';
+import { ImagePlus, X, CheckCircle2, Loader2, ChevronDown, Tag, MapPin, FileText } from 'lucide-react';
 import { CATEGORIES, CATEGORY_FIELDS, REGIONS_DATA } from '../constants/data';
 import { createAnimal, updateAnimal, uploadImages } from '../api/animals';
 import { API_URL } from '../api/client';
@@ -12,6 +12,17 @@ const SelectWrap = ({ children }) => (
   <div className="relative">
     {children}
     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+  </div>
+);
+
+/** Bo'lim sarlavhasi — och yashil doira ichida ikonka + matn */
+const Section = ({ icon: Icon, title, hint }) => (
+  <div className="flex items-center gap-2 mb-3.5">
+    <span className="section-ic">
+      <Icon size={14} />
+    </span>
+    <h3 className="text-[13px] font-bold text-brand">{title}</h3>
+    {hint && <span className="ml-auto text-[11px] text-slate-400">{hint}</span>}
   </div>
 );
 
@@ -61,6 +72,7 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
 
   const fields = useMemo(() => CATEGORY_FIELDS[category] || [], [category]);
   const districts = useMemo(() => REGIONS_DATA[region] || [], [region]);
+  const CatIcon = useMemo(() => CATEGORIES.find((c) => c.id === category)?.icon, [category]);
 
   const setDynField = (key, value) => {
     setDynamic((prev) => ({ ...prev, [key]: value }));
@@ -184,27 +196,27 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', damping: 12 }}
-          className="w-20 h-20 rounded-full bg-brand-green/10 border border-brand-green/30 flex items-center justify-center mb-5"
+          className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-green/15 to-brand-green/5 border border-brand-green/30 flex items-center justify-center mb-5 shadow-lg shadow-brand-green/15"
         >
-          <CheckCircle2 size={40} className="text-brand-green" />
+          <CheckCircle2 size={44} className="text-brand-green" />
         </motion.div>
-        <h2 className="text-lg font-bold text-brand mb-2">E'lon joylandi!</h2>
-        <p className="text-xs text-slate-500 mb-8 leading-relaxed">
+        <h2 className="text-xl font-extrabold text-brand mb-2">E'lon joylandi! 🎉</h2>
+        <p className="text-[13px] text-slate-500 mb-8 leading-relaxed max-w-xs">
           E'loningiz muvaffaqiyatli joylandi va endi barcha foydalanuvchilarga ko'rinadi.
         </p>
-        <div className="flex gap-2.5 w-full">
+        <div className="flex gap-2.5 w-full max-w-sm">
           <button
             onClick={() => {
               resetForm();
               onGoHome?.();
             }}
-            className="flex-1 py-3 rounded-xl bg-brand-green hover:bg-brand-green-dark text-white font-bold text-sm transition-colors active:scale-[0.98]"
+            className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-brand-green to-brand-green-dark text-white font-bold text-sm transition-transform active:scale-[0.98] shadow-lg shadow-brand-green/25"
           >
             Bosh sahifaga
           </button>
           <button
             onClick={() => resetForm()}
-            className="flex-1 py-3 rounded-xl bg-white border border-slate-200 text-slate-400 font-semibold text-sm hover:bg-slate-50 transition-colors active:scale-[0.98]"
+            className="flex-1 py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 hover:border-brand-green/40 transition-colors active:scale-[0.98]"
           >
             Yana e'lon berish
           </button>
@@ -214,19 +226,29 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
   }
 
   const inputCls = (err) =>
-    `w-full bg-white border ${err ? 'border-red-400' : 'border-slate-200'} rounded-xl px-3 py-2.5 text-sm text-brand placeholder:text-slate-500 focus:outline-none focus:border-brand-green transition-colors`;
+    `w-full bg-white border ${err ? 'border-red-400' : 'border-slate-200'} rounded-xl px-3.5 py-2.5 text-sm text-brand placeholder:text-slate-400 focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/15 transition-all`;
 
   const selectCls = (err) =>
-    `w-full appearance-none bg-white border ${err ? 'border-red-400' : 'border-slate-200'} rounded-xl px-3 py-2.5 pr-9 text-sm focus:outline-none focus:border-brand-green transition-colors`;
+    `w-full appearance-none bg-white border ${err ? 'border-red-400' : 'border-slate-200'} rounded-xl px-3.5 py-2.5 pr-9 text-sm focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/15 transition-all`;
+
+  const labelCls = 'text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block';
 
   return (
-    <div className="p-4 space-y-4 w-full md:max-w-xl md:mx-auto">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-brand">{isEdit ? "E'lonni tahrirlash" : "Yangi e'lon"}</h2>
+    <div className="p-4 pb-6 space-y-4 w-full md:max-w-xl md:mx-auto">
+      {/* Sarlavha */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-extrabold text-brand tracking-tight">
+            {isEdit ? "E'lonni tahrirlash" : "Yangi e'lon berish"}
+          </h2>
+          <p className="text-[12px] text-slate-500 mt-1">
+            {isEdit ? "Ma'lumotlarni yangilab, saqlang" : "Bir necha daqiqada e'loningizni joylang"}
+          </p>
+        </div>
         {isEdit && (
           <button
             onClick={onCancelEdit}
-            className="text-xs text-slate-500 hover:text-slate-400 bg-white border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
+            className="shrink-0 text-xs text-slate-500 hover:text-slate-600 bg-white border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
           >
             Bekor qilish
           </button>
@@ -234,7 +256,8 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
       </div>
 
       {/* ── Rasmlar ── */}
-      <div>
+      <div className="surface-card p-4">
+        <Section icon={ImagePlus} title="Rasmlar" hint="Maksimal 8 ta" />
         <input
           ref={fileInputRef}
           type="file"
@@ -249,27 +272,27 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
         {images.length === 0 ? (
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-slate-500 gap-3 hover:border-brand-green/40 transition-colors"
+            className="w-full border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-slate-500 gap-3 hover:border-brand-green/50 hover:bg-brand-green/[0.03] transition-colors"
           >
-            <div className="w-14 h-14 rounded-full bg-brand-green/10 flex items-center justify-center">
-              <ImagePlus size={26} className="text-brand-green" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-green/15 to-brand-green/5 flex items-center justify-center">
+              <ImagePlus size={28} className="text-brand-green-dark" />
             </div>
-            <p className="text-sm font-medium">Rasm yuklash uchun bosing</p>
+            <p className="text-sm font-semibold text-brand">Rasm yuklash uchun bosing</p>
             <p className="text-xs text-slate-500">JPG, PNG, WEBP — 10 MB gacha, maksimal 8 ta</p>
           </button>
         ) : (
           <div className="grid grid-cols-4 gap-2">
             {images.map((img, idx) => (
-              <div key={img.id} className="relative rounded-xl overflow-hidden border border-slate-200" style={{ aspectRatio: '1' }}>
+              <div key={img.id} className="relative rounded-xl overflow-hidden border border-slate-200 shadow-sm" style={{ aspectRatio: '1' }}>
                 <img src={img.preview} alt="" className="w-full h-full object-cover" />
                 {idx === 0 && (
-                  <span className="absolute bottom-1 left-1 bg-brand-green/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+                  <span className="absolute bottom-1 left-1 bg-brand-green text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow">
                     ASOSIY
                   </span>
                 )}
                 <button
                   onClick={() => removeImage(img.id)}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-500/80 transition-colors"
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-500/90 transition-colors"
                 >
                   <X size={11} />
                 </button>
@@ -278,7 +301,7 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
             {images.length < 8 && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-500 hover:border-brand-green/40 hover:text-brand-green transition-colors"
+                className="rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-brand-green/50 hover:text-brand-green-dark hover:bg-brand-green/[0.03] transition-colors"
                 style={{ aspectRatio: '1' }}
               >
                 <ImagePlus size={20} />
@@ -288,126 +311,134 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
         )}
       </div>
 
-      {/* ── Sarlavha ── */}
-      <div>
-        <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-          Sarlavha <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            clearError('title');
-          }}
-          placeholder="Masalan: Golshtin zotli sog'in sigir"
-          maxLength={200}
-          className={inputCls(errors.title)}
-        />
-        {errors.title && <p className="text-[11px] text-red-500 mt-1">{errors.title}</p>}
-      </div>
+      {/* ── Asosiy ma'lumot ── */}
+      <div className="surface-card p-4 space-y-3.5">
+        <Section icon={Tag} title="Asosiy ma'lumot" />
 
-      {/* ── Kategoriya va narx ── */}
-      <div className="grid grid-cols-2 gap-2.5">
+        {/* Sarlavha */}
         <div>
-          <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-            Kategoriya <span className="text-red-500">*</span>
-          </label>
-          <SelectWrap>
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
-                setDynamic({});
-                clearError('category');
-              }}
-              className={`${selectCls(errors.category)} ${category ? 'text-brand' : 'text-slate-400'}`}
-            >
-              <option value="" disabled>
-                Tanlang
-              </option>
-              {CATEGORIES.filter((c) => c.id !== 'all').map((c) => (
-                <option key={c.id} value={c.id} className="bg-white text-brand">
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </SelectWrap>
-          {errors.category && <p className="text-[11px] text-red-500 mt-1">{errors.category}</p>}
-        </div>
-        <div>
-          <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-            Narx (so'm) <span className="text-red-500">*</span>
+          <label className={labelCls}>
+            Sarlavha <span className="text-red-500">*</span>
           </label>
           <input
-            type="number"
-            inputMode="numeric"
-            min="0"
-            value={price}
+            type="text"
+            value={title}
             onChange={(e) => {
-              setPrice(e.target.value);
-              clearError('price');
+              setTitle(e.target.value);
+              clearError('title');
             }}
-            placeholder="0"
-            className={inputCls(errors.price)}
+            placeholder="Masalan: Golshtin zotli sog'in sigir"
+            maxLength={200}
+            className={inputCls(errors.title)}
           />
-          {errors.price && <p className="text-[11px] text-red-500 mt-1">{errors.price}</p>}
+          {errors.title && <p className="text-[11px] text-red-500 mt-1">{errors.title}</p>}
+        </div>
+
+        {/* Kategoriya va narx */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div>
+            <label className={labelCls}>
+              Kategoriya <span className="text-red-500">*</span>
+            </label>
+            <SelectWrap>
+              <select
+                value={category}
+                onChange={(e) => {
+                  setCategory(e.target.value);
+                  setDynamic({});
+                  clearError('category');
+                }}
+                className={`${selectCls(errors.category)} ${category ? 'text-brand' : 'text-slate-400'}`}
+              >
+                <option value="" disabled>
+                  Tanlang
+                </option>
+                {CATEGORIES.filter((c) => c.id !== 'all').map((c) => (
+                  <option key={c.id} value={c.id} className="bg-white text-brand">
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </SelectWrap>
+            {errors.category && <p className="text-[11px] text-red-500 mt-1">{errors.category}</p>}
+          </div>
+          <div>
+            <label className={labelCls}>
+              Narx (so'm) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                clearError('price');
+              }}
+              placeholder="0"
+              className={inputCls(errors.price)}
+            />
+            {errors.price && <p className="text-[11px] text-red-500 mt-1">{errors.price}</p>}
+          </div>
         </div>
       </div>
 
-      {/* ── Viloyat va tuman ── */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div>
-          <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-            Viloyat <span className="text-red-500">*</span>
-          </label>
-          <SelectWrap>
-            <select
-              value={region}
-              onChange={(e) => {
-                setRegion(e.target.value);
-                setDistrict('');
-                clearError('region');
-              }}
-              className={`${selectCls(errors.region)} ${region ? 'text-brand' : 'text-slate-500'}`}
-            >
-              <option value="" disabled>
-                Tanlang
-              </option>
-              {Object.keys(REGIONS_DATA).map((r) => (
-                <option key={r} value={r} className="bg-white text-brand">
-                  {r}
+      {/* ── Manzil ── */}
+      <div className="surface-card p-4 space-y-3.5">
+        <Section icon={MapPin} title="Manzil" />
+        <div className="grid grid-cols-2 gap-2.5">
+          <div>
+            <label className={labelCls}>
+              Viloyat <span className="text-red-500">*</span>
+            </label>
+            <SelectWrap>
+              <select
+                value={region}
+                onChange={(e) => {
+                  setRegion(e.target.value);
+                  setDistrict('');
+                  clearError('region');
+                }}
+                className={`${selectCls(errors.region)} ${region ? 'text-brand' : 'text-slate-500'}`}
+              >
+                <option value="" disabled>
+                  Tanlang
                 </option>
-              ))}
-            </select>
-          </SelectWrap>
-          {errors.region && <p className="text-[11px] text-red-500 mt-1">{errors.region}</p>}
-        </div>
-        <div>
-          <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">
-            Tuman / shahar <span className="text-red-500">*</span>
-          </label>
-          <SelectWrap>
-            <select
-              value={district}
-              onChange={(e) => {
-                setDistrict(e.target.value);
-                clearError('district');
-              }}
-              disabled={!region}
-              className={`${selectCls(errors.district)} ${district ? 'text-brand' : 'text-slate-500'} disabled:opacity-50`}
-            >
-              <option value="" disabled>
-                {region ? 'Tanlang' : 'Avval viloyat'}
-              </option>
-              {districts.map((d) => (
-                <option key={d} value={d} className="bg-white text-brand">
-                  {d}
+                {Object.keys(REGIONS_DATA).map((r) => (
+                  <option key={r} value={r} className="bg-white text-brand">
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </SelectWrap>
+            {errors.region && <p className="text-[11px] text-red-500 mt-1">{errors.region}</p>}
+          </div>
+          <div>
+            <label className={labelCls}>
+              Tuman / shahar <span className="text-red-500">*</span>
+            </label>
+            <SelectWrap>
+              <select
+                value={district}
+                onChange={(e) => {
+                  setDistrict(e.target.value);
+                  clearError('district');
+                }}
+                disabled={!region}
+                className={`${selectCls(errors.district)} ${district ? 'text-brand' : 'text-slate-500'} disabled:opacity-50`}
+              >
+                <option value="" disabled>
+                  {region ? 'Tanlang' : 'Avval viloyat'}
                 </option>
-              ))}
-            </select>
-          </SelectWrap>
-          {errors.district && <p className="text-[11px] text-red-500 mt-1">{errors.district}</p>}
+                {districts.map((d) => (
+                  <option key={d} value={d} className="bg-white text-brand">
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </SelectWrap>
+            {errors.district && <p className="text-[11px] text-red-500 mt-1">{errors.district}</p>}
+          </div>
         </div>
       </div>
 
@@ -417,11 +448,18 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
           key={category}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white border border-slate-200 rounded-2xl p-3.5 space-y-3"
+          className="surface-card p-4"
         >
-          <p className="text-[11px] font-semibold text-brand-green-dark/90 uppercase tracking-wider">
-            {CATEGORIES.find((c) => c.id === category)?.label} — ma'lumotlari
-          </p>
+          <div className="flex items-center gap-2 mb-3.5">
+            {CatIcon && (
+              <span className="section-ic">
+                <CatIcon size={14} />
+              </span>
+            )}
+            <h3 className="text-[13px] font-bold text-brand">
+              {CATEGORIES.find((c) => c.id === category)?.label} ma'lumotlari
+            </h3>
+          </div>
           <div className="grid grid-cols-2 gap-2.5">
             {fields
               .filter((f) => f.type !== 'toggle')
@@ -456,36 +494,38 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
                 </div>
               ))}
           </div>
-          {fields
-            .filter((f) => f.type === 'toggle')
-            .map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setDynField(f.key, !dynamic[f.key])}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-colors ${
-                  dynamic[f.key]
-                    ? 'bg-brand-green/10 border-brand-green/40 text-brand-green-dark'
-                    : 'bg-white border-slate-200 text-slate-500'
-                }`}
-              >
-                <span className="text-sm font-medium">{f.label}</span>
-                <span
-                  className={`w-10 rounded-full p-0.5 transition-colors ${dynamic[f.key] ? 'bg-brand-green' : 'bg-slate-100'}`}
-                  style={{ height: 22 }}
+          <div className="space-y-2.5 mt-2.5">
+            {fields
+              .filter((f) => f.type === 'toggle')
+              .map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setDynField(f.key, !dynamic[f.key])}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-colors ${
+                    dynamic[f.key]
+                      ? 'bg-brand-green/10 border-brand-green/40 text-brand-green-dark'
+                      : 'bg-white border-slate-200 text-slate-500'
+                  }`}
                 >
+                  <span className="text-sm font-medium">{f.label}</span>
                   <span
-                    className="block w-[18px] h-[18px] rounded-full bg-white transition-transform"
-                    style={{ transform: dynamic[f.key] ? 'translateX(20px)' : 'translateX(0)' }}
-                  />
-                </span>
-              </button>
-            ))}
+                    className={`w-10 rounded-full p-0.5 transition-colors ${dynamic[f.key] ? 'bg-brand-green' : 'bg-slate-200'}`}
+                    style={{ height: 22 }}
+                  >
+                    <span
+                      className="block w-[18px] h-[18px] rounded-full bg-white transition-transform"
+                      style={{ transform: dynamic[f.key] ? 'translateX(20px)' : 'translateX(0)' }}
+                    />
+                  </span>
+                </button>
+              ))}
+          </div>
         </motion.div>
       )}
 
       {/* ── Tavsif ── */}
-      <div>
-        <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Tavsif</label>
+      <div className="surface-card p-4">
+        <Section icon={FileText} title="Tavsif" hint="Ixtiyoriy" />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -500,7 +540,7 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
       <button
         onClick={handleSubmit}
         disabled={submitting}
-        className="w-full py-3.5 rounded-xl bg-brand-green hover:bg-brand-green-dark disabled:opacity-60 text-white font-bold text-sm transition-colors active:scale-[0.99] flex items-center justify-center gap-2"
+        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-green to-brand-green-dark disabled:opacity-60 text-white font-bold text-sm transition-all active:scale-[0.99] flex items-center justify-center gap-2 shadow-lg shadow-brand-green/25"
       >
         {submitting ? (
           <>

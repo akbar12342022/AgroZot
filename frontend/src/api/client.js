@@ -4,7 +4,7 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 // sabab darhol konsolda ko'rinsin
 if (import.meta.env.PROD && /localhost|127\.0\.0\.1|REPLACE-WITH/.test(API_URL)) {
   console.error(
-    `[AgroZot] VITE_API_URL xato: "${API_URL}". Netlify'da Site configuration → ` +
+    `[Chorvabozor] VITE_API_URL xato: "${API_URL}". Netlify'da Site configuration → ` +
       "Environment variables bo'limiga backend'ning ochiq HTTPS manzilini qo'shib, qayta deploy qiling."
   );
 }
@@ -68,10 +68,10 @@ export async function request(
   { method = 'GET', body, auth = false, isForm = false, headers: extraHeaders } = {}
 ) {
   const headers = { ...(extraHeaders || {}) };
-  if (auth) {
-    const token = getToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-  }
+  // Token faqat auth so'rovlarda, mavjud bo'lganda qo'shiladi. `token` 401 tekshiruvida
+  // ham kerak — pastga qarang.
+  const token = auth ? getToken() : null;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   if (body && !isForm) headers['Content-Type'] = 'application/json';
 
   let res;
@@ -83,13 +83,17 @@ export async function request(
     });
   } catch (error) {
     // Asl sabab (CORS, DNS, mixed-content va h.k.) konsolda ko'rinadi
-    console.error(`[AgroZot] API so'rovi uzildi: ${method} ${API_URL}${path}`, error);
+    console.error(`[Chorvabozor] API so'rovi uzildi: ${method} ${API_URL}${path}`, error);
     throw new Error("Serverga ulanib bo'lmadi. Internet aloqasini tekshiring.");
   }
 
   const data = await res.json().catch(() => ({}));
 
-  if (res.status === 401 && auth) {
+  // 401 — FAQAT haqiqatan token bilan yuborilgan sessiya chiqariladi (token eskirgan/bekor).
+  // Tokensiz (mehmon) so'rov 401 olsa, chiqariladigan sessiya yo'q, shu bois global logout
+  // dispatch QILINMAYDI — aks holda mehmon AI chatni sinaganda ro'yxatdan o'tish holati
+  // jimgina o'chib ketardi.
+  if (res.status === 401 && token) {
     clearSession();
     window.dispatchEvent(new Event('agrozot:logout'));
   }

@@ -294,3 +294,188 @@ html.dark .card-hover-shadow:hover {
   color: #0284C7;
   border: 1px solid rgba(2, 132, 199, 0.25);
 }
+
+/* ═══════════════ Premium redesign qo'shimchalari ═══════════════ */
+
+/* E'lon kartochkasi — mayin soya (base) + hover ko'tarilishi */
+.listing-card {
+  box-shadow: 0 1px 2px rgba(15, 61, 76, 0.05), 0 6px 20px rgba(15, 61, 76, 0.06);
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+.listing-card:hover {
+  box-shadow: 0 14px 36px rgba(15, 61, 76, 0.16);
+  transform: translateY(-4px);
+  border-color: rgba(22, 163, 74, 0.3);
+}
+html.dark .listing-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.28);
+}
+html.dark .listing-card:hover {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+/* Hero — to'q yashil→teal gradient bant */
+.hero-band {
+  background:
+    radial-gradient(90% 120% at 88% 8%, rgba(52, 211, 153, 0.28) 0%, transparent 46%),
+    radial-gradient(70% 90% at 8% 100%, rgba(2, 132, 199, 0.22) 0%, transparent 50%),
+    linear-gradient(155deg, #0A2E3A 0%, #0F3D4C 34%, #0b4a3a 68%, #052e16 100%);
+}
+/* Nozik nuqta-to'r naqshi (ishonchli, "arzon emas" ko'rinish uchun) */
+.hero-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='1.5' cy='1.5' r='1' fill='rgba(255,255,255,0.06)'/%3E%3C/svg%3E");
+  background-size: 24px 24px;
+}
+/* Hero pastki qismini sahifa foniga silliq ulash */
+.hero-fade {
+  background: linear-gradient(to bottom, transparent 0%, var(--bg-primary) 100%);
+}
+
+/* Kategoriya doirasi — bosilganda yengil ko'tarilish */
+.cat-circle {
+  transition: transform 0.2s ease, box-shadow 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+.cat-item:hover .cat-circle {
+  transform: translateY(-2px);
+}
+.cat-circle.is-active {
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.32);
+}
+
+/* Ishonch statistikasi — hero ostidagi mayda kartalar */
+.trust-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Premium yuzali karta — forma va batafsil oyna bo'limlari (mavzuga mos) */
+.surface-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 61, 76, 0.04), 0 6px 18px rgba(15, 61, 76, 0.05);
+}
+html.dark .surface-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+/* Bo'lim sarlavhasi belgisi — och yashil doira ichida ikonka */
+.section-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--brand-green-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+html.dark .section-ic {
+  background: rgba(52, 211, 153, 0.14);
+  color: #4ade80;
+}
+
+/* Professional footer — to'q yashil, doim quyuq (rasmiy ko'rinish) */
+.site-footer {
+  background:
+    radial-gradient(80% 120% at 15% 0%, rgba(22, 163, 74, 0.16) 0%, transparent 55%),
+    linear-gradient(160deg, #0A2E3A 0%, #0c3a2e 60%, #052e16 100%);
+  color: #E6EDF3;
+}
+.footer-link {
+  color: rgba(230, 237, 243, 0.68);
+  transition: color 0.18s ease, padding-left 0.18s ease;
+}
+.footer-link:hover {
+  color: #ffffff;
+  padding-left: 3px;
+}
+.footer-social {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.footer-social:hover {
+  background: rgba(22, 163, 74, 0.9);
+  border-color: rgba(22, 163, 74, 0.9);
+  transform: translateY(-2px);
+}
+
+/* ═══════════════ Chorva AI — glassmorphism, glow, breathing ═══════════════ */
+
+/* Qimmatbaho shisha (glassmorphism) panel */
+.ai-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 24px 70px -18px rgba(15, 61, 76, 0.4);
+}
+html.dark .ai-glass {
+  background: rgba(17, 30, 44, 0.68);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 70px -18px rgba(0, 0, 0, 0.65);
+}
+
+/* Butun ekranni qoplaydigan blur fon */
+.ai-backdrop {
+  background: rgba(9, 20, 26, 0.38);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+/* Personaj ostidagi "yer" soyasi */
+.ai-shadow {
+  background: radial-gradient(ellipse at center, rgba(15, 61, 76, 0.28) 0%, transparent 70%);
+  filter: blur(3px);
+}
+html.dark .ai-shadow {
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, transparent 70%);
+}
+
+/* Yaltirab turuvchi launcher tugmasi — pulslanuvchi halqa */
+@keyframes ai-pulse-ring {
+  0% { transform: scale(0.85); opacity: 0.65; }
+  70% { transform: scale(1.7); opacity: 0; }
+  100% { opacity: 0; }
+}
+.ai-pulse-ring {
+  animation: ai-pulse-ring 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+/* Aylanuvchi gradient nur halqasi (premium glow) */
+@keyframes ai-spin {
+  to { transform: rotate(360deg); }
+}
+.ai-glow-ring::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, #16a34a, #34d399, #7dd3fc, #16a34a);
+  animation: ai-spin 4.5s linear infinite;
+  filter: blur(5px);
+  opacity: 0.75;
+  z-index: 0;
+}
+
+/* Yashil "obuna" chaqnashi */
+@keyframes ai-flash {
+  0% { opacity: 0; }
+  25% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+.ai-flash {
+  animation: ai-flash 1.1s ease-out forwards;
+  background: radial-gradient(circle at 50% 55%, rgba(52, 211, 153, 0.9) 0%, rgba(22, 163, 74, 0.35) 45%, transparent 75%);
+}
+
+/* Personaj pastini yumshoq yo'qotuvchi niqob (nomukammal oyoqlarni yashiradi) */
+.ai-persona-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 84%, transparent 99%);
+  mask-image: linear-gradient(to bottom, #000 84%, transparent 99%);
+}

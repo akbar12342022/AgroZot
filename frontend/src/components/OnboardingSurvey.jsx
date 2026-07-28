@@ -7,7 +7,7 @@ import { SURVEY_ROLES, SURVEY_INTERESTS, SURVEY_SOURCES } from '../constants/sur
 const QUESTIONS = [
   {
     key: 'role',
-    title: 'AgroZot platformasidan qanday maqsadda foydalanmoqchisiz?',
+    title: 'Chorvabozor platformasidan qanday maqsadda foydalanmoqchisiz?',
     options: SURVEY_ROLES,
     multi: false,
   },
@@ -232,7 +232,7 @@ export default function OnboardingSurvey({ onComplete }) {
                     transition={{ delay: 0.38, duration: 0.45 }}
                     className="text-lg font-bold bg-gradient-to-r from-brand-green to-brand-sky bg-clip-text text-transparent mt-1"
                   >
-                    AgroZot platformasiga xush kelibsiz
+                    Chorvabozor platformasiga xush kelibsiz
                   </motion.p>
 
                   <motion.p
@@ -353,7 +353,7 @@ export default function OnboardingSurvey({ onComplete }) {
                     transition={{ delay: 0.4, duration: 0.45 }}
                     className="text-xs text-slate-500 mt-3 leading-relaxed max-w-xs"
                   >
-                    Javoblaringiz biz uchun juda qadrli. Endi ro'yxatdan o'tib, AgroZot'ning barcha
+                    Javoblaringiz biz uchun juda qadrli. Endi ro'yxatdan o'tib, Chorvabozor'ning barcha
                     imkoniyatlaridan bemalol foydalanishingiz mumkin.
                   </motion.p>
 

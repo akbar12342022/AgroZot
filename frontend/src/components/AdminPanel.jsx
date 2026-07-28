@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ShieldCheck,
   KeyRound,
@@ -11,10 +11,22 @@ import {
   X,
   Trash2,
   AlertTriangle,
+  Inbox,
+  Send,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { VerifiedBadge } from './icons';
-import { adminPing, adminUsers, adminSetPlan, adminSetVerified, adminDeleteUser } from '../api/admin';
+import {
+  adminPing,
+  adminUsers,
+  adminSetPlan,
+  adminSetVerified,
+  adminDeleteUser,
+  adminReports,
+  adminReplyReport,
+} from '../api/admin';
 import {
   SURVEY_ROLE_LABELS,
   SURVEY_INTEREST_LABELS,
@@ -139,6 +151,15 @@ export default function AdminPanel() {
   const [notice, setNotice] = useState(null);
   const noticeTimer = useRef(null);
   const searchTimer = useRef(null);
+
+  // Bo'lim: 'users' | 'reports'
+  const [tab, setTab] = useState('users');
+  const [reports, setReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState(null);
+  const [openReports, setOpenReports] = useState(0);
+  const [replyText, setReplyText] = useState({}); // { [reportId]: matn }
+  const [sendingReplyId, setSendingReplyId] = useState(null);
 
   const flash = (message, type = 'success') => {
     clearTimeout(noticeTimer.current);
@@ -286,6 +307,50 @@ export default function AdminPanel() {
       .finally(() => setLoading(false));
   };
 
+  // ── Shikoyatlar ──
+  const loadReports = useCallback(() => {
+    setReportsLoading(true);
+    adminReports(key)
+      .then((res) => {
+        setReports(res.data || []);
+        setOpenReports(res.openCount || 0);
+        setReportsError(null);
+      })
+      .catch((err) => setReportsError(err.message))
+      .finally(() => setReportsLoading(false));
+  }, [key]);
+
+  // Shikoyatlar bo'limi ochilganda yuklanadi
+  useEffect(() => {
+    if (authed && tab === 'reports') loadReports();
+  }, [authed, tab, loadReports]);
+
+  const handleReply = async (report) => {
+    const text = (replyText[report.id] || '').trim();
+    if (!text || sendingReplyId) return;
+    setSendingReplyId(report.id);
+    try {
+      await adminReplyReport(key, report.id, text);
+      setReports((prev) =>
+        prev.map((r) => (r.id === report.id ? { ...r, status: 'RESOLVED', adminReply: text } : r))
+      );
+      setOpenReports((n) => Math.max(0, n - 1));
+      setReplyText((prev) => ({ ...prev, [report.id]: '' }));
+      flash("Javob yuborildi — foydalanuvchi chatiga xabar bordi");
+    } catch (err) {
+      flash(err.message, 'error');
+    } finally {
+      setSendingReplyId(null);
+    }
+  };
+
+  const tabBtnCls = (id) =>
+    `flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+      tab === id
+        ? 'bg-brand-green text-white border-brand-green'
+        : 'bg-white text-slate-600 border-slate-200 hover:border-brand-green/40'
+    }`;
+
   // ── Kirish ekrani ──
   if (!authed) {
     return (
@@ -293,7 +358,7 @@ export default function AdminPanel() {
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-8">
             <BrandLogo variant="lg" iconOnly />
-            <h1 className="text-xl font-extrabold text-brand mt-3">AgroZot Admin</h1>
+            <h1 className="text-xl font-extrabold text-brand mt-3">Chorvabozor Admin</h1>
             <p className="text-xs text-slate-500 mt-1">Kirish uchun admin kalitini kiriting</p>
           </div>
 
@@ -347,17 +412,17 @@ export default function AdminPanel() {
         <div className="flex items-center gap-3 mb-5">
           <BrandLogo iconOnly />
           <div className="flex-1">
-            <h1 className="text-lg font-extrabold leading-tight">AgroZot Admin</h1>
+            <h1 className="text-lg font-extrabold leading-tight">Chorvabozor Admin</h1>
             <p className="text-[11px] text-slate-500 flex items-center gap-1">
               <Users size={11} /> {users.length} ta foydalanuvchi
             </p>
           </div>
           <button
-            onClick={forceReload}
+            onClick={tab === 'reports' ? loadReports : forceReload}
             title="Yangilash"
             className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-brand-green transition-colors"
           >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={loading || reportsLoading ? 'animate-spin' : ''} />
           </button>
           <button
             onClick={handleLogout}
@@ -368,6 +433,36 @@ export default function AdminPanel() {
           </button>
         </div>
 
+        {/* Bo'lim almashtirgich */}
+        <div className="flex items-center gap-2 mb-4">
+          <button onClick={() => setTab('users')} className={tabBtnCls('users')}>
+            <Users size={14} /> Foydalanuvchilar
+          </button>
+          <button onClick={() => setTab('reports')} className={tabBtnCls('reports')}>
+            <Inbox size={14} /> Shikoyatlar
+            {openReports > 0 && (
+              <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {openReports}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Bildirishnoma (ikkala bo'lim uchun) */}
+        {notice && (
+          <div
+            className={`mb-3 text-xs px-3.5 py-2.5 rounded-xl border ${
+              notice.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-600'
+                : 'bg-brand-green/10 border-brand-green/30 text-brand-green-dark'
+            }`}
+          >
+            {notice.message}
+          </div>
+        )}
+
+        {tab === 'users' && (
+        <>
         {/* Qidiruv */}
         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 mb-4 max-w-md">
           <Search size={15} className="text-slate-500 shrink-0" />
@@ -384,19 +479,6 @@ export default function AdminPanel() {
             </button>
           )}
         </div>
-
-        {/* Bildirishnoma */}
-        {notice && (
-          <div
-            className={`mb-3 text-xs px-3.5 py-2.5 rounded-xl border ${
-              notice.type === 'error'
-                ? 'bg-red-50 border-red-200 text-red-600'
-                : 'bg-brand-green/10 border-brand-green/30 text-brand-green-dark'
-            }`}
-          >
-            {notice.message}
-          </div>
-        )}
 
         {/* Jadval */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -499,6 +581,110 @@ export default function AdminPanel() {
         <p className="text-[10px] text-slate-400 mt-4 text-center">
           Tarif o'zgarishi foydalanuvchiga darhol qo'llanadi — Pro: kuniga 5 ta rasm tahlili, Plus: cheksiz.
         </p>
+        </>
+        )}
+
+        {/* ── Shikoyatlar bo'limi ── */}
+        {tab === 'reports' && (
+          <div className="space-y-3">
+            {reportsLoading && reports.length === 0 ? (
+              <div className="flex justify-center py-16">
+                <Loader2 size={22} className="text-brand-green animate-spin" />
+              </div>
+            ) : reportsError ? (
+              <div className="text-center py-12 px-4 bg-white border border-slate-200 rounded-2xl">
+                <p className="text-sm text-red-500 mb-3">{reportsError}</p>
+                <button
+                  onClick={loadReports}
+                  className="px-4 py-2 rounded-lg bg-brand-green text-white text-xs font-semibold hover:bg-brand-green-dark transition-colors"
+                >
+                  Qayta urinish
+                </button>
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
+                <Inbox size={28} className="text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">Hozircha shikoyatlar yo'q</p>
+              </div>
+            ) : (
+              reports.map((r) => (
+                <div key={r.id} className="bg-white border border-slate-200 rounded-2xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-brand flex items-center gap-2">
+                        {[r.reporter?.firstName, r.reporter?.lastName].filter(Boolean).join(' ') ||
+                          'Nomsiz'}
+                        <span className="text-[11px] font-normal text-slate-400">
+                          {r.reporter?.phone || `#${r.reporterId}`}
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                        <Clock size={10} /> {fmtDate(r.createdAt)}
+                        {r.targetType !== 'OTHER' && (
+                          <span className="ml-1">
+                            • {r.targetType}
+                            {r.targetId ? ` #${r.targetId}` : ''}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {r.status === 'RESOLVED' ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-green-dark bg-brand-green/10 border border-brand-green/30 rounded-full px-2 py-0.5 shrink-0">
+                        <CheckCircle2 size={12} /> Javob berilgan
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-300 rounded-full px-2 py-0.5 shrink-0">
+                        <Clock size={12} /> Yangi
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-sm text-slate-600 mt-2.5 whitespace-pre-wrap break-words bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                    {r.reason}
+                  </p>
+
+                  {r.status === 'RESOLVED' && r.adminReply ? (
+                    <div className="mt-2.5 border-l-2 border-brand-green pl-3">
+                      <p className="text-[10px] font-bold text-brand-green-dark uppercase tracking-wider">
+                        Javobingiz
+                      </p>
+                      <p className="text-sm text-slate-600 mt-0.5 whitespace-pre-wrap break-words">
+                        {r.adminReply}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <textarea
+                        value={replyText[r.id] || ''}
+                        onChange={(e) =>
+                          setReplyText((prev) => ({ ...prev, [r.id]: e.target.value }))
+                        }
+                        placeholder="Foydalanuvchiga javob yozing — chatiga 'Qo'llab-quvvatlash (Admin)' nomidan boradi..."
+                        rows={2}
+                        maxLength={2000}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-brand placeholder:text-slate-400 focus:outline-none focus:border-brand-green transition-colors resize-none"
+                      />
+                      <div className="flex justify-end mt-2">
+                        <button
+                          onClick={() => handleReply(r)}
+                          disabled={!(replyText[r.id] || '').trim() || sendingReplyId === r.id}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-green hover:bg-brand-green-dark disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors active:scale-[0.98]"
+                        >
+                          {sendingReplyId === r.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Send size={14} />
+                          )}
+                          Javob yuborish
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── O'chirishni tasdiqlash modali ── */}

@@ -47,7 +47,7 @@ const mediaUpload = multer({
     if (MEDIA_TYPES.includes(file.mimetype)) cb(null, true);
     else cb(new Error("Bu fayl turi qo'llab-quvvatlanmaydi (rasm, video yoki audio yuboring)"));
   },
-  limits: { fileSize: 30 * 1024 * 1024, files: 1 }, // 30 MB
+  limits: { fileSize: 100 * 1024 * 1024, files: 1 }, // 100 MB (video uchun)
 });
 
 /**
@@ -79,7 +79,7 @@ router.post('/media', auth, mediaUpload.single('media'), (req, res) => {
 // Multer xatolarini ushlash
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ error: 'Fayl hajmi juda katta (rasm 10 MB, video/audio 30 MB gacha)' });
+    return res.status(400).json({ error: 'Fayl hajmi juda katta (rasm 10 MB, video/audio 100 MB gacha)' });
   }
   res.status(400).json({ error: err.message || 'Fayl yuklashda xatolik yuz berdi' });
 });

@@ -3,7 +3,7 @@ import { BOTTOM_TABS } from '../constants/data';
 import { useI18n } from '../i18n.js';
 
 /** Pastki navigatsiya paneli */
-export default function BottomNav({ activeTab, onTabChange }) {
+export default function BottomNav({ activeTab, onTabChange, unreadTotal = 0 }) {
   const { t } = useI18n();
   const activeIndex = BOTTOM_TABS.findIndex((tab) => tab.id === activeTab);
   // Har bir tugma flex-1 bilan teng joy egallaydi — indikator markazi shu slotning o'rtasi
@@ -42,7 +42,15 @@ export default function BottomNav({ activeTab, onTabChange }) {
                   <PlusCircle size={22} />
                 </div>
               ) : (
-                <tab.icon size={20} />
+                <span className="relative">
+                  <tab.icon size={20} />
+                  {/* Chat ikonkasidagi o'qilmagan xabarlar soni (qizil badge) */}
+                  {tab.id === 'chat' && unreadTotal > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border border-white leading-none">
+                      {unreadTotal > 99 ? '99+' : unreadTotal}
+                    </span>
+                  )}
+                </span>
               )}
               <span className={`text-[10px] mt-1 truncate max-w-full ${isPost ? 'text-brand-green font-medium' : ''}`}>
                 {t(`nav.${tab.id}`)}

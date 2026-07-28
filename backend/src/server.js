@@ -8,6 +8,8 @@ const { Server } = require('socket.io');
 
 const prisma = require('./utils/prisma');
 const { verifyToken } = require('./middleware/auth');
+const { sendPushToUser } = require('./utils/push');
+const { getSupportUser } = require('./utils/support');
 const authRoutes = require('./routes/authRoutes');
 const animalRoutes = require('./routes/animalRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -15,6 +17,8 @@ const chatRoutes = require('./routes/chatRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const pushRoutes = require('./routes/pushRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 
@@ -70,6 +74,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/push', pushRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Salomatlikni tekshirish
 app.get('/health', (req, res) => {
@@ -92,6 +98,36 @@ app.set('io', io);
 
 const CHAT_USER_SELECT = { id: true, firstName: true, lastName: true, avatarUrl: true, isVerified: true };
 const MESSAGE_TYPES = ['TEXT', 'IMAGE', 'VIDEO', 'AUDIO', 'VIDEO_NOTE'];
+
+// Xabar bilan birga uni yozgan foydalanuvchi va javob berilgan xabar (reply)
+const MESSAGE_INCLUDE = {
+  user: { select: CHAT_USER_SELECT },
+  replyTo: {
+    select: {
+      id: true,
+      type: true,
+      content: true,
+      mediaUrl: true,
+      userId: true,
+      user: { select: { id: true, firstName: true, lastName: true } },
+    },
+  },
+};
+
+/** Foydalanuvchi hozir onlayn (biror socket xonasida) ekanligini tekshirish */
+function isUserOnline(uid) {
+  const room = io.sockets.adapter.rooms.get(`user:${uid}`);
+  return !!room && room.size > 0;
+}
+
+/** DM xabarining qisqa ko'rinishi (push matni uchun) */
+function pushPreview(msg) {
+  if (msg.type === 'IMAGE') return '📷 Rasm';
+  if (msg.type === 'VIDEO') return '🎬 Video';
+  if (msg.type === 'VIDEO_NOTE') return '⭕ Video xabar';
+  if (msg.type === 'AUDIO') return '🎤 Ovozli xabar';
+  return (msg.content || '').slice(0, 120) || 'Yangi xabar';
+}
 
 /** Xabarga biriktirilgan yuklangan faylni diskdan o'chirish (best-effort) */
 function unlinkMedia(mediaUrl) {
@@ -141,9 +177,27 @@ io.on('connection', (socket) => {
         }
       }
 
+      // Reply (javob): faqat shu xonadagi mavjud xabarga javob berish mumkin
+      let replyToId = null;
+      const rawReply = parseInt(payload?.replyToId);
+      if (!isNaN(rawReply)) {
+        const original = await prisma.message.findUnique({
+          where: { id: rawReply },
+          select: { id: true, chatId: true },
+        });
+        if (original && original.chatId === (chat ? chat.id : null)) replyToId = original.id;
+      }
+
       const message = await prisma.message.create({
-        data: { type, content, mediaUrl, userId: socket.userId, chatId: chat ? chat.id : null },
-        include: { user: { select: CHAT_USER_SELECT } },
+        data: {
+          type,
+          content,
+          mediaUrl,
+          replyToId,
+          userId: socket.userId,
+          chatId: chat ? chat.id : null,
+        },
+        include: MESSAGE_INCLUDE,
       });
 
       if (chat) {
@@ -152,6 +206,20 @@ io.on('connection', (socket) => {
           .update({ where: { id: chat.id }, data: { updatedAt: new Date() } })
           .catch((e) => console.error('Suhbat vaqtini yangilashda xato:', e));
         io.to(`user:${chat.userAId}`).to(`user:${chat.userBId}`).emit('dm:new', message);
+
+        // Qabul qiluvchi saytda bo'lmasa — push bildirishnoma yuboramiz
+        const recipientId = chat.userAId === socket.userId ? chat.userBId : chat.userAId;
+        if (!isUserOnline(recipientId)) {
+          const senderName =
+            [message.user.firstName, message.user.lastName].filter(Boolean).join(' ') ||
+            'Yangi xabar';
+          sendPushToUser(recipientId, {
+            title: senderName,
+            body: pushPreview(message),
+            url: '/',
+            tag: `chat-${chat.id}`,
+          }).catch(() => {});
+        }
       } else {
         io.emit('chat:new', message);
       }
@@ -175,8 +243,8 @@ io.on('connection', (socket) => {
 
       const at = new Date();
       const { count } = await prisma.message.updateMany({
-        where: { chatId, userId: { not: socket.userId }, readAt: null },
-        data: { readAt: at },
+        where: { chatId, userId: { not: socket.userId }, isRead: false },
+        data: { readAt: at, isRead: true },
       });
 
       if (count > 0) {
@@ -234,4 +302,6 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server ${PORT}-portda ishga tushdi (HTTP + Socket.IO).`);
+  // "Qo'llab-quvvatlash (Admin)" akkauntini tayyorlab qo'yamiz (best-effort)
+  getSupportUser().catch((e) => console.error('Support akkaunti tayyorlanmadi:', e.message));
 });

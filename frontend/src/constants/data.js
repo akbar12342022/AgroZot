@@ -1,16 +1,6 @@
-import {
-  Home,
-  MessagesSquare,
-  PlusCircle,
-  Bot,
-  User,
-  Rabbit,
-  Bird,
-  Wheat,
-  Wrench,
-  LayoutGrid,
-} from 'lucide-react';
-import { CowIcon, SheepIcon, HorseIcon } from '../components/icons';
+import { Home, MessagesSquare, PlusCircle, Bot, User } from 'lucide-react';
+import { BiCategoryAlt } from 'react-icons/bi';
+import { GiCow, GiSheep, GiRabbit, GiRooster, GiHorseHead, GiWheat, GiGears } from 'react-icons/gi';
 
 // ─── O'zbekiston viloyatlari va tumanlari ───
 export const REGIONS_DATA = {
@@ -82,16 +72,16 @@ export const REGIONS_DATA = {
 export const ALL_REGIONS_LABEL = 'Barcha hududlar';
 export const REGIONS = [ALL_REGIONS_LABEL, ...Object.keys(REGIONS_DATA)];
 
-// ─── Kategoriyalar (ikonkalar bilan, emoji ishlatilmaydi) ───
+// ─── Kategoriyalar (react-icons SVG ikonkalari, emoji ishlatilmaydi) ───
 export const CATEGORIES = [
-  { id: 'all', icon: LayoutGrid, label: 'Barchasi' },
-  { id: 'cattle', icon: CowIcon, label: 'Qoramol' },
-  { id: 'sheep', icon: SheepIcon, label: "Qo'y-echki" },
-  { id: 'rabbit', icon: Rabbit, label: 'Quyonlar' },
-  { id: 'poultry', icon: Bird, label: 'Parranda' },
-  { id: 'horse', icon: HorseIcon, label: 'Otlar' },
-  { id: 'feed', icon: Wheat, label: 'Yem-hashak' },
-  { id: 'equipment', icon: Wrench, label: 'Jihozlar' },
+  { id: 'all', icon: BiCategoryAlt, label: 'Barchasi' },
+  { id: 'cattle', icon: GiCow, label: 'Qoramol' },
+  { id: 'sheep', icon: GiSheep, label: "Qo'y-echki" },
+  { id: 'rabbit', icon: GiRabbit, label: 'Quyonlar' },
+  { id: 'poultry', icon: GiRooster, label: 'Parranda' },
+  { id: 'horse', icon: GiHorseHead, label: 'Otlar' },
+  { id: 'feed', icon: GiWheat, label: 'Yem-hashak' },
+  { id: 'equipment', icon: GiGears, label: 'Jihozlar' },
 ];
 
 export const CATEGORY_LABELS = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
@@ -184,6 +174,6 @@ export const BOTTOM_TABS = [
 export const CHAT_HISTORY = [
   {
     sender: 'ai',
-    text: "Salom! Men AgroZot AI yordamchisiman. Istalgan savolingizga javob beraman — chorva salomatligi, ratsion, davolash yoki bozor narxlari. Hayvon rasmini yuborsangiz, taxminiy vazni va narxini baholab beraman.",
+    text: "Salom! Men Chorvabozor AI yordamchisiman. Istalgan savolingizga javob beraman — chorva salomatligi, ratsion, davolash yoki bozor narxlari. Hayvon rasmini yuborsangiz, taxminiy vazni va narxini baholab beraman.",
   },
 ];

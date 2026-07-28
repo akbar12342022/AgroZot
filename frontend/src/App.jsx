@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Bot, Send, Trash2, Loader2, WifiOff, ImagePlus, X, Lock, Sparkles } from 'lucide-react';
+import { Search, Bot, Send, Trash2, Loader2, WifiOff, ImagePlus, X, Lock, Sparkles, Moon, Sun } from 'lucide-react';
 
 // Komponentlar
 import ListingCard from './components/ListingCard';
@@ -20,15 +20,21 @@ import WelcomeSplash from './components/WelcomeSplash';
 import PricingModal from './components/PricingModal';
 import AdminPanel from './components/AdminPanel';
 import BrandLogo from './components/BrandLogo';
+import HeroSection from './components/HeroSection';
+import CategoryRail from './components/CategoryRail';
+import SiteFooter from './components/SiteFooter';
+import AIRoot from './ai/AIRoot';
 
 // Hooklar, API va ma'lumotlar
 import { useAnimals } from './hooks/useAnimals';
 import { useBookmarks } from './hooks/useBookmarks';
 import { CATEGORIES, CHAT_HISTORY, ALL_REGIONS_LABEL } from './constants/data';
 import { aiChat, aiAccess } from './api/animals';
-import { uploadMedia, openDirectChat } from './api/chat';
+import { uploadMedia, openDirectChat, fetchUnreadTotal } from './api/chat';
 import { resolveImageUrl } from './api/client';
 import { isLoggedIn, currentUser, logout } from './api/auth';
+import { subscribeToPush } from './api/push';
+import { useI18n } from './i18n';
 
 const CHAT_STORAGE_KEY = 'agrozot_ai_chat';
 const DEFAULT_SUGGESTIONS = [
@@ -51,6 +57,30 @@ function MainApp({ user, onLogout, showToast, toast }) {
   const [editItem, setEditItem] = useState(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [pendingChat, setPendingChat] = useState(null); // e'londan ochilgan shaxsiy suhbat
+  const [unreadTotal, setUnreadTotal] = useState(0); // navbar chat badge
+
+  // Jami o'qilmagan xabarlar sonini yangilash (navbar badge uchun)
+  const refreshUnread = useCallback(() => {
+    fetchUnreadTotal()
+      .then((r) => setUnreadTotal(r.total || 0))
+      .catch(() => {});
+  }, []);
+
+  // ChatTab ochiq bo'lsa 'agrozot:unread' hodisasi orqali darhol; aks holda
+  // sahifa fokusга kelganda qayta so'raladi (chat tab yopiq paytdagi yangi xabarlar).
+  useEffect(() => {
+    refreshUnread();
+    const onUnread = (e) => setUnreadTotal(e.detail || 0);
+    const onVisible = () => document.visibilityState === 'visible' && refreshUnread();
+    window.addEventListener('agrozot:unread', onUnread);
+    window.addEventListener('focus', refreshUnread);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('agrozot:unread', onUnread);
+      window.removeEventListener('focus', refreshUnread);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [refreshUnread]);
 
   // ── AI chat holati ──
   const [chatInput, setChatInput] = useState('');
@@ -237,67 +267,108 @@ function MainApp({ user, onLogout, showToast, toast }) {
     setActiveTab('chat');
   };
 
+  // ── Sarlavha uchun kunduzgi/tungi rejim ──
+  const { theme, setTheme } = useI18n();
+
+  // Hero ekrandan chiqqanini kuzatib, sarlavhada ixcham qidiruvni chiqarish
+  const scrollRef = useRef(null);
+  const [heroSentinel, setHeroSentinel] = useState(null);
+  const [heroVisible, setHeroVisible] = useState(true);
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!heroSentinel || !root) return;
+    const io = new IntersectionObserver(([entry]) => setHeroVisible(entry.isIntersecting), { root });
+    io.observe(heroSentinel);
+    return () => io.disconnect();
+  }, [heroSentinel]);
+
   return (
     <>
       <Toast toast={toast} />
 
-      {/* ═══ Yopishqoq sarlavha (bosh sahifada) ═══ */}
+      {/* ═══ Yopishqoq sarlavha (bosh sahifada) — logotip, rejim, hudud ═══ */}
       {activeTab === 'home' && (
         <div className="glass-header sticky top-0 z-30 border-b border-slate-200 shrink-0">
-          {/* Navbar: logotip — mobilda markazda, md+ da chapda */}
-          <div className="flex items-center justify-center md:justify-start px-4 pt-2">
-            <BrandLogo />
-          </div>
-          <div className="px-4 pt-2 pb-2">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5">
-                <Search size={15} className="text-slate-500 shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Qidirish..."
-                  className="bg-transparent text-sm text-brand flex-1 focus:outline-none placeholder:text-slate-400"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-slate-600 p-0.5">
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <BrandLogo className="shrink-0" />
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                aria-label="Kunduzgi/tungi rejim"
+                className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-brand-green-dark hover:border-brand-green/40 transition-colors active:scale-95"
+              >
+                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
               <RegionDropdown selected={selectedRegion} onSelect={setSelectedRegion} />
             </div>
           </div>
 
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide px-4 pb-2.5">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap transition-all ${
-                  activeCategory === cat.id
-                    ? 'bg-brand-green/10 text-brand-green-dark border border-brand-green/40 chip-active'
-                    : 'bg-white text-slate-500 border border-transparent hover:bg-slate-50 hover:text-slate-600'
-                }`}
+          {/* Hero ekrandan chiqqach paydo bo'ladigan ixcham qidiruv */}
+          <AnimatePresence initial={false}>
+            {!heroVisible && (
+              <motion.div
+                key="compact-search"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22 }}
+                className="overflow-hidden"
               >
-                <cat.icon size={13} className="shrink-0" />
-                {cat.label}
-              </button>
-            ))}
-          </div>
+                <div className="px-4 pb-2.5">
+                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5">
+                    <Search size={15} className="text-slate-500 shrink-0" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Qidirish..."
+                      className="bg-transparent text-sm text-brand flex-1 focus:outline-none placeholder:text-slate-400"
+                    />
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery('')} className="text-slate-500 hover:text-slate-600 p-0.5">
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
       {/* ═══ Asosiy kontent — pastki padding navbar + iOS uy indikatorini hisobga oladi ═══ */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto scrollbar-hide pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+      >
         <AnimatePresence mode="wait">
           {/* ── Bosh sahifa ── */}
           {activeTab === 'home' && (
             <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="px-4 py-2.5 flex items-center justify-between border-b border-slate-100">
-                <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse-dot" />
-                  {loading ? 'Yuklanmoqda...' : error ? 'Xatolik yuz berdi' : `${total} ta e'lon topildi`}
+              {/* Hero — katta sarlavha va qidiruv */}
+              <HeroSection
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                total={total}
+                sentinelRef={setHeroSentinel}
+              />
+
+              {/* Kategoriyalar (doira ikonkalar, yopishqoq) */}
+              <CategoryRail
+                categories={CATEGORIES}
+                activeCategory={activeCategory}
+                onSelect={setActiveCategory}
+              />
+
+              {/* Natijalar sarlavhasi */}
+              <div className="px-4 pt-4 pb-1 flex items-end justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-brand leading-tight">So'nggi e'lonlar</h2>
+                  <p className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse-dot" />
+                    {loading ? 'Yuklanmoqda...' : error ? 'Xatolik yuz berdi' : `${total} ta e'lon topildi`}
+                  </p>
                 </div>
                 <SortMenu selected={sort} onSelect={setSort} />
               </div>
@@ -363,6 +434,9 @@ function MainApp({ user, onLogout, showToast, toast }) {
                   )}
                 </>
               )}
+
+              {/* Professional footer */}
+              <SiteFooter />
             </motion.div>
           )}
 
@@ -418,7 +492,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
                 </div>
                 <div>
                   <h2 className="font-bold text-sm text-brand flex items-center gap-1.5">
-                    AgroZot AI
+                    Chorvabozor AI
                     {aiAccessInfo?.plan === 'PREMIUM' && (
                       <span className="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-600 text-[9px] font-extrabold tracking-wider">
                         PREMIUM
@@ -649,7 +723,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
       </AnimatePresence>
 
       {/* ═══ Pastki navigatsiya ═══ */}
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} unreadTotal={unreadTotal} />
     </>
   );
 }
@@ -691,6 +765,12 @@ export default function App() {
     window.addEventListener('agrozot:logout', handler);
     return () => window.removeEventListener('agrozot:logout', handler);
   }, []);
+
+  // Foydalanuvchi kirgach — push bildirishnomalarga obuna (ruxsat so'raladi).
+  // Qo'llab-quvvatlanmasa yoki rad etilsa jimgina o'tib ketadi.
+  useEffect(() => {
+    if (user) subscribeToPush().catch(() => {});
+  }, [user]);
 
   // So'rovnoma yakunlandi — ro'yxatdan o'tish formasi ochiladi
   const handleSurveyComplete = (answers) => {
@@ -747,7 +827,7 @@ export default function App() {
             </div>
 
             <p className="relative text-[11px] text-slate-200/80 tracking-widest uppercase mt-8">
-              Chorva Bozori — zamonaviy savdo
+              Chorvabozor
             </p>
           </div>
 
@@ -789,6 +869,15 @@ export default function App() {
           <MainApp user={user} onLogout={handleLogout} showToast={showToast} toast={toast} />
         </div>
       )}
+
+      {/* ═══ Chorva AI ═══
+          Root darajada, LOGIN HOLATIDAN QAT'I NAZAR mount qilinadi: mijoz saytni ochishi
+          bilanoq AI personaj (hello) qorong'i blur fon ustida salomlashib, o'zini tanishtiradi
+          — kirgan bo'lsa ham, bo'lmasa ham (enabled). Chat launcher/oyna esa faqat kirgan
+          foydalanuvchi uchun (authed) — mehmon chati auth:true endpointga urилиб 401 → global
+          logout keltirib chiqarardi va ro'yxatdan o'tishni buzardi. Admin marshruti (#admin)
+          yuqorida return qilinadi, shu bois u yerda AI chiqmaydi. */}
+      <AIRoot enabled={!showSplash} authed={!!user} />
     </div>
   );
 }

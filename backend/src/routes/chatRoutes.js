@@ -5,17 +5,34 @@ const router = express.Router();
 
 const USER_SELECT = { id: true, firstName: true, lastName: true, avatarUrl: true, isVerified: true, phone: true };
 
+// Xabar bilan birga uni yozgan foydalanuvchi va (bo'lsa) javob berilgan xabar
+const MESSAGE_INCLUDE = {
+  user: { select: USER_SELECT },
+  replyTo: {
+    select: {
+      id: true,
+      type: true,
+      content: true,
+      mediaUrl: true,
+      userId: true,
+      user: { select: { id: true, firstName: true, lastName: true } },
+    },
+  },
+};
+
 /** Juftlikni bir xil tartibga keltirish (userAId < userBId) */
 function orderPair(a, b) {
   return a < b ? [a, b] : [b, a];
 }
 
-/** Suhbatni frontend kutadigan shaklga keltirish (sherik + oxirgi xabar) */
-function shapeChat(chat, myId) {
+/** Suhbatni frontend kutadigan shaklga keltirish (sherik + oxirgi xabar + o'qilmaganlar) */
+function shapeChat(chat, myId, extra = {}) {
   return {
     id: chat.id,
     partner: chat.userAId === myId ? chat.userB : chat.userA,
     lastMessage: chat.messages?.[0] || null,
+    unreadCount: extra.unreadCount || 0,
+    hasMention: extra.hasMention || false,
     updatedAt: chat.updatedAt,
     createdAt: chat.createdAt,
   };
@@ -37,7 +54,7 @@ router.get('/messages', auth, async (req, res) => {
       where,
       orderBy: { id: 'desc' },
       take: limit,
-      include: { user: { select: USER_SELECT } },
+      include: MESSAGE_INCLUDE,
     });
 
     // Eng eskisi birinchi bo'lib ko'rsatiladi
@@ -96,7 +113,7 @@ router.post('/direct', auth, async (req, res) => {
 
 /**
  * GET /chats
- * Mening shaxsiy suhbatlarim (oxirgi xabari bilan, yangisi birinchi).
+ * Mening shaxsiy suhbatlarim (oxirgi xabari + o'qilmaganlar soni + @ eslatma bilan).
  */
 router.get('/chats', auth, async (req, res) => {
   try {
@@ -111,10 +128,64 @@ router.get('/chats', auth, async (req, res) => {
       },
     });
 
-    res.json({ data: chats.map((c) => shapeChat(c, req.userId)) });
+    const chatIds = chats.map((c) => c.id);
+    let unreadByChat = new Map();
+    let mentionSet = new Set();
+
+    if (chatIds.length) {
+      // Har bir suhbatdagi o'qilmagan (mendan bo'lmagan) xabarlar soni
+      const groups = await prisma.message.groupBy({
+        by: ['chatId'],
+        where: { chatId: { in: chatIds }, userId: { not: req.userId }, isRead: false },
+        _count: { _all: true },
+      });
+      unreadByChat = new Map(groups.map((g) => [g.chatId, g._count._all]));
+
+      // @ eslatma: sherik mening xabarimga javob yozgan va u hali o'qilmagan
+      const mentions = await prisma.message.findMany({
+        where: {
+          chatId: { in: chatIds },
+          userId: { not: req.userId },
+          isRead: false,
+          replyTo: { is: { userId: req.userId } },
+        },
+        select: { chatId: true },
+        distinct: ['chatId'],
+      });
+      mentionSet = new Set(mentions.map((m) => m.chatId));
+    }
+
+    res.json({
+      data: chats.map((c) =>
+        shapeChat(c, req.userId, {
+          unreadCount: unreadByChat.get(c.id) || 0,
+          hasMention: mentionSet.has(c.id),
+        })
+      ),
+    });
   } catch (error) {
-    console.error('Suhbatlar ro\'yxatini olishda xatolik:', error);
+    console.error("Suhbatlar ro'yxatini olishda xatolik:", error);
     res.status(500).json({ error: 'Suhbatlarni yuklashda xatolik yuz berdi' });
+  }
+});
+
+/**
+ * GET /unread-total
+ * Barcha shaxsiy suhbatlardagi jami o'qilmagan xabarlar soni (navbar badge uchun).
+ */
+router.get('/unread-total', auth, async (req, res) => {
+  try {
+    const total = await prisma.message.count({
+      where: {
+        userId: { not: req.userId },
+        isRead: false,
+        chat: { OR: [{ userAId: req.userId }, { userBId: req.userId }] },
+      },
+    });
+    res.json({ total });
+  } catch (error) {
+    console.error("O'qilmaganlar sonini olishda xatolik:", error);
+    res.status(500).json({ error: 'Xatolik yuz berdi' });
   }
 });
 
@@ -141,7 +212,7 @@ router.get('/chats/:id/messages', auth, async (req, res) => {
       where,
       orderBy: { id: 'desc' },
       take: limit,
-      include: { user: { select: USER_SELECT } },
+      include: MESSAGE_INCLUDE,
     });
 
     res.json({ data: rows.reverse(), hasMore: rows.length === limit });

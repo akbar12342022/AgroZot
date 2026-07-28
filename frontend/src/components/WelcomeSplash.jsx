@@ -74,7 +74,7 @@ export default function WelcomeSplash({ name, onDone }) {
         transition={{ delay: 1.7, duration: 0.5 }}
         className="relative text-[11px] text-slate-500 mt-4 tracking-widest uppercase"
       >
-        Chorva Bozori — zamonaviy savdo
+        Chorvabozor
       </motion.p>
     </motion.div>
   );

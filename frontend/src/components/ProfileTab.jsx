@@ -17,9 +17,11 @@ import {
   Moon,
   Send,
   LifeBuoy,
+  Flag,
 } from 'lucide-react';
 import { fetchMe, fetchMyAnimals, deleteAnimal, updateMyName, updateMyAvatar } from '../api/animals';
 import { uploadMedia } from '../api/chat';
+import { submitReport } from '../api/reports';
 import { patchStoredUser } from '../api/auth';
 import { resolveImageUrl } from '../api/client';
 import { normalizeAnimal, formatPrice } from '../utils/helpers';
@@ -56,8 +58,27 @@ export default function ProfileTab({
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [reloadKey, setReloadKey] = useState(0); // "Qayta urinish" uchun
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [sendingReport, setSendingReport] = useState(false);
   const avatarInputRef = useRef(null);
   const { t, lang, setLang, theme, setTheme } = useI18n();
+
+  const handleSubmitReport = async () => {
+    const text = reportText.trim();
+    if (text.length < 3 || sendingReport) return;
+    setSendingReport(true);
+    try {
+      await submitReport(text);
+      setReportOpen(false);
+      setReportText('');
+      showToast('Murojaatingiz yuborildi. Tez orada javob beramiz.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Yuborishda xatolik', 'error');
+    } finally {
+      setSendingReport(false);
+    }
+  };
 
   // Ma'lumotlarni yuklash — setState faqat promise callbacklarida (asinxron)
   // chaqiriladi, effekt ichida sinxron render zanjiri hosil bo'lmaydi.
@@ -197,9 +218,12 @@ export default function ProfileTab({
         )}
       </div>
 
-      {/* Profil kartasi */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5">
-        <div className="flex items-center gap-4">
+      {/* Profil kartasi — gradient banner + ustidagi avatar */}
+      <div className="surface-card overflow-hidden">
+        <div className="h-16 hero-band relative">
+          <div className="hero-pattern absolute inset-0 opacity-50" />
+        </div>
+        <div className="px-5 pb-5 flex gap-4">
           {/* Avatar — bosilsa rasm yuklanadi */}
           <input
             ref={avatarInputRef}
@@ -211,32 +235,34 @@ export default function ProfileTab({
               e.target.value = '';
             }}
           />
-          <button
-            type="button"
-            onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
-            title={t('profile.avatarChange')}
-            className="relative w-14 h-14 shrink-0 rounded-full group focus:outline-none"
-          >
-            {avatarSrc ? (
-              <img
-                src={avatarSrc}
-                alt=""
-                className="w-14 h-14 rounded-full object-cover shadow-lg shadow-brand-green/20"
-              />
-            ) : (
-              <span className="w-14 h-14 rounded-full bg-gradient-to-br from-brand-green to-brand flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-brand-green/20">
-                {initial}
-              </span>
-            )}
-            <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-brand-green border-2 border-white flex items-center justify-center text-white">
-              {uploadingAvatar ? (
-                <Loader2 size={11} className="animate-spin" />
+          <div className="-mt-9 shrink-0 p-1 rounded-full bg-[var(--bg-card)]">
+            <button
+              type="button"
+              onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+              title={t('profile.avatarChange')}
+              className="relative w-[68px] h-[68px] rounded-full group focus:outline-none"
+            >
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  className="w-[68px] h-[68px] rounded-full object-cover"
+                />
               ) : (
-                <Camera size={11} />
+                <span className="w-[68px] h-[68px] rounded-full bg-gradient-to-br from-brand-green to-brand flex items-center justify-center text-white text-xl font-bold">
+                  {initial}
+                </span>
               )}
-            </span>
-          </button>
-          <div className="flex-1 min-w-0">
+              <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-brand-green border-2 border-[var(--bg-card)] flex items-center justify-center text-white">
+                {uploadingAvatar ? (
+                  <Loader2 size={11} className="animate-spin" />
+                ) : (
+                  <Camera size={11} />
+                )}
+              </span>
+            </button>
+          </div>
+          <div className="flex-1 min-w-0 pt-3.5">
             {editingName ? (
               <div className="flex items-center gap-2">
                 <input
@@ -304,18 +330,20 @@ export default function ProfileTab({
       </div>
 
       {/* Statistika */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2.5">
         {stats.map((stat) => (
-          <div key={stat.label} className="bg-white border border-slate-200 rounded-xl p-3 text-center">
-            <stat.icon size={17} className="mx-auto mb-1.5 text-brand-green-dark" />
-            <p className="text-base font-bold text-brand">{stat.value}</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">{stat.label}</p>
+          <div key={stat.label} className="surface-card p-3.5 text-center">
+            <span className="section-ic mx-auto mb-2">
+              <stat.icon size={15} />
+            </span>
+            <p className="text-xl font-extrabold text-brand leading-none">{stat.value}</p>
+            <p className="text-[10px] text-slate-500 mt-1.5">{stat.label}</p>
           </div>
         ))}
       </div>
 
       {/* ── Sozlamalar: til va tungi rejim ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <div className="surface-card overflow-hidden">
         <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 pt-4 pb-1">
           {t('profile.settings')}
         </h3>
@@ -371,7 +399,7 @@ export default function ProfileTab({
       </div>
 
       {/* ── Admin bilan bog'lanish ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4">
+      <div className="surface-card p-4">
         <div className="flex items-center gap-2.5 mb-1.5">
           <span className="w-9 h-9 shrink-0 rounded-lg bg-brand-green/10 border border-brand-green/30 flex items-center justify-center text-brand-green-dark">
             <LifeBuoy size={16} />
@@ -397,11 +425,22 @@ export default function ProfileTab({
             <Phone size={14} /> {ADMIN_PHONE_DISPLAY}
           </a>
         </div>
+        <button
+          onClick={() => setReportOpen(true)}
+          className="w-full mt-2 py-2.5 rounded-xl bg-white border border-slate-200 text-brand text-xs font-semibold flex items-center justify-center gap-2 hover:border-brand-green/40 transition-colors"
+        >
+          <Flag size={14} className="text-brand-green-dark" /> Shikoyat / murojaat yuborish
+        </button>
       </div>
 
       {/* Mening e'lonlarim */}
       <div>
-        <h3 className="text-sm font-bold text-brand mb-2.5">{t('profile.myListings')}</h3>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="section-ic">
+            <ClipboardList size={14} />
+          </span>
+          <h3 className="text-sm font-bold text-brand">{t('profile.myListings')}</h3>
+        </div>
         {myAnimals.length === 0 ? (
           <div>
             <EmptyState icon={PlusCircle} title={t('profile.noListings')} subtitle={t('profile.noListingsHint')} />
@@ -415,11 +454,11 @@ export default function ProfileTab({
         ) : (
           <div className="space-y-2">
             {myAnimals.map((item) => (
-              <div key={item.id} className="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center gap-3">
+              <div key={item.id} className="surface-card p-2.5 flex items-center gap-3">
                 <img
                   src={item.img}
                   alt=""
-                  className="w-14 h-14 rounded-lg object-cover shrink-0 cursor-pointer"
+                  className="w-14 h-14 rounded-xl object-cover shrink-0 cursor-pointer"
                   onClick={() => onOpenListing(item)}
                 />
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onOpenListing(item)}>
@@ -472,7 +511,12 @@ export default function ProfileTab({
 
       {/* Saqlangan e'lonlar */}
       <div>
-        <h3 className="text-sm font-bold text-brand mb-2.5">{t('profile.savedListings')}</h3>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="section-ic">
+            <Bookmark size={14} />
+          </span>
+          <h3 className="text-sm font-bold text-brand">{t('profile.savedListings')}</h3>
+        </div>
         {savedItems.length === 0 ? (
           <EmptyState icon={Bookmark} title={t('profile.noSaved')} subtitle={t('profile.noSavedHint')} />
         ) : (
@@ -489,6 +533,58 @@ export default function ProfileTab({
           </div>
         )}
       </div>
+
+      {/* ── Shikoyat / murojaat modali ── */}
+      {reportOpen && (
+        <div
+          className="fixed inset-0 z-[220] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-5"
+          onClick={() => !sendingReport && setReportOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 p-5 shadow-2xl"
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <span className="w-10 h-10 shrink-0 rounded-full bg-brand-green/10 border border-brand-green/30 flex items-center justify-center text-brand-green-dark">
+                <LifeBuoy size={18} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-brand">Qo'llab-quvvatlashga murojaat</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Muammo yoki shikoyatingizni yozing. Javob chat bo'limingizga "Qo'llab-quvvatlash
+                  (Admin)" nomidan keladi.
+                </p>
+              </div>
+            </div>
+            <textarea
+              value={reportText}
+              onChange={(e) => setReportText(e.target.value)}
+              placeholder="Murojaat matni..."
+              rows={4}
+              maxLength={1000}
+              autoFocus
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-brand placeholder:text-slate-400 focus:outline-none focus:border-brand-green transition-colors resize-none"
+            />
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => setReportOpen(false)}
+                disabled={sendingReport}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Bekor qilish
+              </button>
+              <button
+                onClick={handleSubmitReport}
+                disabled={reportText.trim().length < 3 || sendingReport}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-brand-green to-brand-green-dark text-white text-sm font-bold transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-brand-green/20"
+              >
+                {sendingReport ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                Yuborish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
