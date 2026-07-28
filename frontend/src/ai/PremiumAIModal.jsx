@@ -16,9 +16,12 @@ const PLANS = [
   { id: 'yearly', name: 'Yillik', price: '249 000', per: "so'm / yil", note: '2 oy sovg\'a', best: true },
 ];
 
-/** Obuna (Paywall) oynasi — glassmorphism, tariflar, "Obuna bo'lish". */
+// Obuna uchun admin bilan bog'lanish manzili
+const TELEGRAM_URL = 'https://t.me/afaridshop';
+
+/** Obuna (Paywall) oynasi — qattiq (solid) fon, tariflar, "Obuna bo'lish" → Telegram. */
 export default function PremiumAIModal() {
-  const { paywallOpen, closePaywall, subscribe } = useAI();
+  const { paywallOpen, closePaywall } = useAI();
   const [plan, setPlan] = useState('yearly');
 
   return (
@@ -37,7 +40,7 @@ export default function PremiumAIModal() {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 40, opacity: 0, scale: 0.97 }}
             transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-            className="ai-glass relative w-full sm:max-w-md rounded-t-[28px] sm:rounded-[28px] overflow-hidden max-h-[92dvh] overflow-y-auto scrollbar-hide"
+            className="relative w-full sm:max-w-md rounded-t-[28px] sm:rounded-[28px] overflow-hidden max-h-[92dvh] overflow-y-auto scrollbar-hide bg-white dark:bg-gray-900 border border-slate-200 dark:border-white/10 shadow-2xl"
           >
             <button
               onClick={closePaywall}
@@ -106,13 +109,16 @@ export default function PremiumAIModal() {
 
             {/* CTA */}
             <div className="px-6 pt-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-              <motion.button
+              {/* Obuna bo'lish — foydalanuvchini to'g'ridan-to'g'ri Telegram'ga yo'naltiradi */}
+              <motion.a
                 whileTap={{ scale: 0.98 }}
-                onClick={subscribe}
+                href={TELEGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-green to-brand-green-dark text-white font-extrabold text-[15px] flex items-center justify-center gap-2 shadow-xl shadow-brand-green/35"
               >
                 <Sparkles size={17} /> Obuna bo'lish
-              </motion.button>
+              </motion.a>
               <button
                 onClick={closePaywall}
                 className="w-full mt-2 py-2 text-[12px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"

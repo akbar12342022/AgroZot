@@ -24,6 +24,7 @@ import HeroSection from './components/HeroSection';
 import CategoryRail from './components/CategoryRail';
 import SiteFooter from './components/SiteFooter';
 import AIRoot from './ai/AIRoot';
+import AIPersona from './ai/AIPersona';
 
 // Hooklar, API va ma'lumotlar
 import { useAnimals } from './hooks/useAnimals';
@@ -233,6 +234,10 @@ function MainApp({ user, onLogout, showToast, toast }) {
   const aiLocked =
     aiAccessInfo?.plan === 'STANDARD' && aiAccessInfo?.remainingQuestions === 0;
 
+  // Foydalanuvchi hali birorta ham xabar yozmagan bo'lsa — ChatGPT uslubidagi
+  // markazlashgan kutib olish ekrani ko'rsatiladi (boshlang'ich AI salomi hisobga olinmaydi)
+  const chatStarted = messages.some((m) => m.sender === 'user');
+
   const handleTabChange = (tab) => {
     // Bepul savollari tugagan foydalanuvchi AI bo'limini ochsa — tariflar oynasi
     if (tab === 'ai' && aiLocked) {
@@ -395,6 +400,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: Math.min(idx * 0.04, 0.4), duration: 0.3 }}
+                          className="h-full"
                         >
                           <ListingCard
                             item={item}
@@ -526,6 +532,26 @@ function MainApp({ user, onLogout, showToast, toast }) {
                 )}
               </div>
 
+              {/* Kutib olish ekrani — suhbat hali boshlanmagan bo'lsa (ChatGPT uslubi) */}
+              {!chatStarted ? (
+                <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+                  <motion.div
+                    initial={{ opacity: 0, y: 16, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    className="flex flex-col items-center"
+                  >
+                    <AIPersona mood="hello" height={190} glow />
+                    <h3 className="mt-5 text-[20px] font-extrabold text-brand tracking-tight leading-snug">
+                      Bugun nima haqida yordam beray?
+                    </h3>
+                    <p className="mt-2 text-xs text-slate-500 leading-relaxed max-w-[18rem]">
+                      Chorva sog'lig'i, ratsion, zot tanlash yoki bozor narxlari — savolingizni
+                      yozing yoki pastdagi tayyor savollardan birini tanlang.
+                    </p>
+                  </motion.div>
+                </div>
+              ) : (
               <div className="flex-1 overflow-y-auto scrollbar-hide py-4 px-4 space-y-3">
                 {messages.map((m, i) => (
                   <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -552,6 +578,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
                 )}
                 <div ref={chatEndRef} />
               </div>
+              )}
 
               {/* Tayyor savollar */}
               {suggestions.length > 0 && !isAiThinking && !pendingImage && (
@@ -733,6 +760,11 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(() => isLoggedIn());
   const [adminRoute, setAdminRoute] = useState(() => window.location.hash === '#admin');
 
+  // AI salomlashuv (onboarding) faqat shu sessiyada ro'yxatdan o'tilgandagina chiqadi.
+  // Sahifa yangilanishi yoki oddiy kirishda false qoladi — modal ko'rinmaydi.
+  // Bir marta ko'rilgani AIContext'dagi localStorage `hasSeenOnboarding` kalitida saqlanadi.
+  const [justRegistered, setJustRegistered] = useState(false);
+
   // ── Onboarding so'rovnomasi holati ──
   // Javoblar React state'da turadi va ro'yxatdan o'tishda backendga yuboriladi.
   // Kirmagan foydalanuvchiga ro'yxatdan o'tish formasi oldidan har doim so'rovnoma chiqadi.
@@ -781,6 +813,7 @@ export default function App() {
   const handleRegistered = (u) => {
     setUser(u);
     setShowSplash(true);
+    setJustRegistered(true);
   };
 
   const handleLogout = () => {
@@ -789,6 +822,7 @@ export default function App() {
     setShowSplash(false);
     setSurvey(null);
     setSurveyDone(false);
+    setJustRegistered(false);
   };
 
   if (adminRoute) return <AdminPanel />;
@@ -870,14 +904,12 @@ export default function App() {
         </div>
       )}
 
-      {/* ═══ Chorva AI ═══
-          Root darajada, LOGIN HOLATIDAN QAT'I NAZAR mount qilinadi: mijoz saytni ochishi
-          bilanoq AI personaj (hello) qorong'i blur fon ustida salomlashib, o'zini tanishtiradi
-          — kirgan bo'lsa ham, bo'lmasa ham (enabled). Chat launcher/oyna esa faqat kirgan
-          foydalanuvchi uchun (authed) — mehmon chati auth:true endpointga urилиб 401 → global
-          logout keltirib chiqarardi va ro'yxatdan o'tishni buzardi. Admin marshruti (#admin)
-          yuqorida return qilinadi, shu bois u yerda AI chiqmaydi. */}
-      <AIRoot enabled={!showSplash} authed={!!user} />
+      {/* ═══ Chorva AI onboarding (salomlashuv) ═══
+          FAQAT foydalanuvchi shu sessiyada birinchi marta ro'yxatdan o'tgach, splash
+          tugagandan keyin bir marta ko'rsatiladi (localStorage `hasSeenOnboarding`).
+          Login yoki sahifa yangilanishida chiqmaydi. Suzuvchi AI launcher olib tashlangan —
+          AI chat faqat pastki navbar'dagi "AI Yordam" orqali ochiladi. */}
+      <AIRoot enabled={!!user && justRegistered && !showSplash} />
     </div>
   );
 }

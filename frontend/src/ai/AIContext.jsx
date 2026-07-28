@@ -4,7 +4,9 @@ import { preloadAI } from './aiAssets';
 const FREE_LIMIT = 3;
 const KEY_FREE = 'chorva_ai_free';
 const KEY_SUB = 'chorva_ai_sub';
-const KEY_ONB = 'chorva_ai_onboarded';
+// Onboarding (salomlashuv) FAQAT birinchi ro'yxatdan o'tishdan keyin bir marta
+// ko'rsatiladi — shu kalit orqali eslab qolinadi (App.jsx justRegistered bilan birga).
+const KEY_ONB = 'hasSeenOnboarding';
 const KEY_TYPE = 'chorva_ai_type';
 
 const read = (k, fallback) => {

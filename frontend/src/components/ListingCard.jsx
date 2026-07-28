@@ -9,10 +9,10 @@ export default function ListingCard({ item, isBookmarked, onBookmark, onSelect }
   return (
     <div
       onClick={() => onSelect(item)}
-      className="group bg-white border border-slate-200 rounded-2xl overflow-hidden cursor-pointer listing-card flex flex-col"
+      className="group bg-white border border-slate-200 rounded-2xl overflow-hidden cursor-pointer listing-card flex flex-col h-full"
     >
-      {/* Rasm — 4:3 nisbat */}
-      <div className="relative overflow-hidden" style={{ aspectRatio: '4/3' }}>
+      {/* Rasm — barcha kartochkalarda bir xil qat'iy balandlik */}
+      <div className="relative overflow-hidden h-48 shrink-0">
         <img
           src={item.img || (item.images && item.images[0])}
           alt={item.title}
@@ -67,20 +67,22 @@ export default function ListingCard({ item, isBookmarked, onBookmark, onSelect }
         </p>
 
         {/* Sarlavha — 2 qatorgacha */}
-        <h4 className="mt-1 text-[13px] font-medium text-brand line-clamp-2 leading-snug min-h-[2.4em]">
+        {/* min-h aynan 2 qator (leading-snug 1.375 × 2 = 2.75em) uchun joy band qiladi —
+            1 qatorli sarlavhali kartochka boshqa qatordagilardan past bo'lib qolmaydi */}
+        <h4 className="mt-1 text-[13px] font-medium text-brand line-clamp-2 leading-snug min-h-[2.75em]">
           {item.title}
         </h4>
 
         {/* Joylashuv va vaqt */}
-        <div className="flex items-center gap-1.5 mt-1.5">
+        <div className="flex items-center gap-1.5 mt-1.5 mb-2.5">
           <MapPin size={11} className="text-slate-400 shrink-0" />
           <span className="text-[11px] text-slate-500 truncate">
             {item.location} • {item.time}
           </span>
         </div>
 
-        {/* Sotuvchi + Tasdiqlangan belgi (ishonch uyg'otadi) */}
-        <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center gap-1.5">
+        {/* Sotuvchi + Tasdiqlangan belgi — mt-auto bilan doim kartochka pastiga yopishadi */}
+        <div className="mt-auto pt-2.5 border-t border-slate-100 flex items-center gap-1.5">
           {item.sellerAvatar ? (
             <img src={item.sellerAvatar} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
           ) : (

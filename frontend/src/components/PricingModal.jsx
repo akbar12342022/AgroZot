@@ -58,7 +58,7 @@ export default function PricingModal({ contact, onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
-      className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-sm flex items-end md:items-center justify-center md:p-4"
+      className="fixed inset-0 z-[150] bg-slate-900/70 backdrop-blur-md flex items-end md:items-center justify-center md:p-4"
     >
       <motion.div
         initial={{ y: 60, opacity: 0, scale: 0.97 }}

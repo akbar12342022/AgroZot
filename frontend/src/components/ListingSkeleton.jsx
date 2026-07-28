@@ -2,7 +2,7 @@
 export default function ListingSkeleton() {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden animate-pulse listing-card">
-      <div style={{ aspectRatio: '4/3' }} className="bg-slate-200" />
+      <div className="h-48 bg-slate-200" />
       <div className="p-3">
         {/* Narx */}
         <div className="h-5 bg-slate-200 rounded-md w-2/3" />

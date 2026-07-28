@@ -1,36 +1,27 @@
-import { useAI } from './AIContext';
 import AIOnboarding from './AIOnboarding';
-import AILauncher from './AILauncher';
-import AIChat from './AIChat';
 import PremiumAIModal from './PremiumAIModal';
 
 /**
- * Barcha Chorva AI overlaylarini bir joyda yig'adi. Ilova ildizida bir marta mount qilinadi.
+ * Chorva AI ildiz komponenti — onboarding (salomlashuv) va Premium paywall modali.
  *
- * enabled — onboarding personaji (salom) ko'rinishi uchun (splash tugagach yoki kirmagan
- *           foydalanuvchida darhol true).
- * authed  — suzuvchi chat launcher + chat + paywall FAQAT tizimga kirgan foydalanuvchi
- *           uchun. Sabab: (1) `/api/ai/chat` auth:true — kirmagan mehmon so'rovi 401 qaytarib,
- *           ro'yxatdan o'tish jarayonini buzardi; (2) launcher pastki navigatsiya ustiga
- *           joylashgan, u esa faqat asosiy ilovada bor. Onboarding SALOMI esa hammaga chiqadi.
+ * MUHIM: ilgari bu yerda suzuvchi AILauncher + AIChat overlay ham bor edi. Pastki
+ * navigatsiyada "AI Yordam" bo'limi bo'lgani uchun ikkita AI kirish nuqtasi chalkashlik
+ * tug'dirardi — suzuvchi widget va overlay chat butunlay olib tashlandi. AI chat faqat
+ * pastki navbar orqali ochiladi (App.jsx, activeTab === 'ai').
+ *
+ * PremiumAIModal esa chat emas — DetailModal ichidagi "AI tahlil" (AIAnalyze) bepul
+ * limiti tugaganda openPaywall() orqali ochiladigan obuna oynasi, shuning uchun qoladi.
+ *
+ * enabled — salomlashuv modali ko'rinishi mumkin bo'lgan payt. App.jsx buni FAQAT
+ *           foydalanuvchi shu sessiyada ro'yxatdan o'tgach (justRegistered) va splash
+ *           tugagach true qiladi. Bir marta ko'rsatilgani localStorage'dagi
+ *           `hasSeenOnboarding` kaliti orqali eslab qolinadi (AIContext).
  */
-export default function AIRoot({ enabled = true, authed = true }) {
-  const { flash } = useAI();
+export default function AIRoot({ enabled = false }) {
   return (
     <>
-      {/* Salomlashuvchi personaj — LOGIN HOLATIDAN QAT'I NAZAR hammaga */}
       <AIOnboarding enabled={enabled} />
-
-      {/* Chat tajribasi — faqat kirgan foydalanuvchi uchun */}
-      {authed && (
-        <>
-          <AILauncher />
-          <AIChat />
-          <PremiumAIModal />
-          {/* Obuna bo'lgandagi yashil chaqnash */}
-          {flash && <div className="ai-flash fixed inset-0 z-[400] pointer-events-none" />}
-        </>
-      )}
+      <PremiumAIModal />
     </>
   );
 }
