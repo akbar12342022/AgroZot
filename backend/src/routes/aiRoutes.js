@@ -47,6 +47,21 @@ function normalizePlan(plan) {
   return PLAN_MODELS[normalized] ? normalized : 'STANDARD';
 }
 
+/**
+ * Amaldagi tarif — obuna muddati (aiPlanExpiresAt) o'tgan bo'lsa foydalanuvchi
+ * avtomatik STANDARDga qaytariladi (bazada ham yangilanadi, keyingi so'rovlar tez).
+ */
+function effectivePlan(user) {
+  const plan = normalizePlan(user.aiPlan);
+  if (plan !== 'STANDARD' && user.aiPlanExpiresAt && new Date(user.aiPlanExpiresAt) < new Date()) {
+    prisma.user
+      .update({ where: { id: user.id }, data: { aiPlan: 'STANDARD', aiPlanExpiresAt: null } })
+      .catch((e) => console.error('Obunani STANDARDga qaytarishda xato:', e));
+    return 'STANDARD';
+  }
+  return plan;
+}
+
 /** Toshkent (UTC+5) bo'yicha bugungi sana — kunlik limit shu sana bo'yicha nollanadi */
 function tashkentToday() {
   return new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -224,7 +239,7 @@ router.post('/chat', auth, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(401).json({ error: 'Foydalanuvchi topilmadi' });
 
-    const plan = normalizePlan(user.aiPlan);
+    const plan = effectivePlan(user);
 
     // STANDARD (bepul) tarif: jami FREE_QUESTION_LIMIT ta savol
     if (plan === 'STANDARD' && user.aiUsageCount >= FREE_QUESTION_LIMIT) {
@@ -314,7 +329,7 @@ router.get('/access', auth, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(401).json({ error: 'Foydalanuvchi topilmadi' });
 
-    const plan = normalizePlan(user.aiPlan);
+    const plan = effectivePlan(user);
     const usage = imageUsage(user, plan);
     res.json({
       plan,

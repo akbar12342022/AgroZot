@@ -56,7 +56,7 @@ export default function HeroSection({ searchQuery, setSearchQuery, total, sentin
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Masalan: Golshtin sigir, beda, inkubator..."
-              className="flex-1 min-w-0 bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none py-2"
+              className="flex-1 min-w-0 bg-transparent text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-400 focus:outline-none py-2"
             />
             {searchQuery && (
               <button

@@ -18,6 +18,8 @@ import {
   Send,
   LifeBuoy,
   Flag,
+  Briefcase,
+  ChevronRight,
 } from 'lucide-react';
 import { fetchMe, fetchMyAnimals, deleteAnimal, updateMyName, updateMyAvatar } from '../api/animals';
 import { uploadMedia } from '../api/chat';
@@ -45,6 +47,7 @@ export default function ProfileTab({
   isBookmarked,
   showToast,
   refreshKey,
+  onBecomeProvider,
 }) {
   const [me, setMe] = useState(null);
   const [myAnimals, setMyAnimals] = useState([]);
@@ -340,6 +343,56 @@ export default function ProfileTab({
             <p className="text-[10px] text-slate-500 mt-1.5">{stat.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── Xizmatlar — zamonaviy ixcham bo'lim (Qassob / Yuk tashish / Ozuqa) ── */}
+      <div className="surface-card p-4 overflow-hidden relative">
+        {/* Nozik bezak nuri */}
+        <span className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-brand-green/10 blur-3xl pointer-events-none" />
+
+        <div className="relative flex items-center justify-between mb-3">
+          <h3 className="text-[13px] font-bold text-brand flex items-center gap-2">
+            <span className="section-ic">
+              <Briefcase size={14} />
+            </span>
+            Xizmatlar
+          </h3>
+          <span className="text-[9.5px] font-bold text-brand-green-dark bg-brand-green/10 border border-brand-green/25 rounded-full px-2 py-0.5 uppercase tracking-wide">
+            Daromad manbai
+          </span>
+        </div>
+
+        {/* 3 ta yo'nalish — ixcham kartochkalar, bosilganda kerakli forma ochiladi */}
+        <div className="relative grid grid-cols-3 gap-2">
+          {[
+            { id: 'butcher', emoji: '🔪', label: 'Qassob', sub: "So'yish xizmati", tint: 'from-red-500/10 to-orange-400/5 border-red-400/25 hover:border-red-400/50' },
+            { id: 'transport', emoji: '🚛', label: 'Yuk tashish', sub: 'Hayvon tashish', tint: 'from-sky-500/10 to-cyan-400/5 border-sky-400/25 hover:border-sky-400/50' },
+            { id: 'feed', emoji: '🌾', label: 'Ozuqa', sub: 'Yem-xashak', tint: 'from-amber-500/10 to-yellow-400/5 border-amber-400/25 hover:border-amber-400/50' },
+          ].map((s) => (
+            <button
+              key={s.id}
+              onClick={() => onBecomeProvider?.(s.id)}
+              className={`group rounded-2xl border bg-gradient-to-br ${s.tint} p-3 flex flex-col items-center text-center transition-all active:scale-[0.96]`}
+            >
+              <span className="w-10 h-10 rounded-xl bg-white/80 border border-white shadow-sm flex items-center justify-center text-[20px] leading-none group-active:scale-90 transition-transform">
+                {s.emoji}
+              </span>
+              <span className="text-[11.5px] font-bold text-brand mt-2 leading-tight">{s.label}</span>
+              <span className="text-[9px] text-slate-500 mt-0.5 leading-tight">{s.sub}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Ixcham CTA */}
+        <button
+          onClick={() => onBecomeProvider?.()}
+          className="relative w-full mt-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-brand-green to-brand-green-dark px-3.5 py-2.5 text-white shadow-md shadow-brand-green/20 active:scale-[0.99] transition-transform"
+        >
+          <span className="text-[12px] font-bold">Xizmat ko'rsatuvchi bo'ling</span>
+          <span className="flex items-center gap-1 text-[10.5px] text-emerald-100/90 font-medium">
+            mijozlarni shu yerdan toping <ChevronRight size={13} />
+          </span>
+        </button>
       </div>
 
       {/* ── Sozlamalar: til va tungi rejim ── */}

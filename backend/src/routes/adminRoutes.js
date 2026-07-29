@@ -43,6 +43,66 @@ router.get('/ping', (req, res) => {
 });
 
 /**
+ * GET /stats
+ * Dashboard statistikasi: umumiy sonlar + so'rovnoma tahlili.
+ */
+router.get('/stats', async (req, res) => {
+  try {
+    const [totalUsers, activeListings, pendingListings, roleGroups, sourceGroups, interestRows] =
+      await Promise.all([
+        prisma.user.count({ where: { isSupport: false } }),
+        prisma.animal.count({ where: { status: 'ACTIVE' } }),
+        prisma.animal.count({ where: { status: 'PENDING' } }),
+        prisma.user.groupBy({
+          by: ['surveyRole'],
+          where: { surveyRole: { not: null } },
+          _count: { _all: true },
+        }),
+        prisma.user.groupBy({
+          by: ['surveySource'],
+          where: { surveySource: { not: null } },
+          _count: { _all: true },
+        }),
+        prisma.user.findMany({
+          where: { surveyInterests: { isEmpty: false } },
+          select: { surveyInterests: true },
+        }),
+      ]);
+
+    // Hozir onlayn — Socket.IO da `user:<id>` xonasiga ulangan foydalanuvchilar soni
+    let onlineNow = 0;
+    const io = req.app.get('io');
+    if (io) {
+      for (const [room, sockets] of io.sockets.adapter.rooms) {
+        if (room.startsWith('user:') && sockets.size > 0) onlineNow++;
+      }
+    }
+
+    // surveyInterests — String[] ustuni: JS da sanab chiqamiz
+    const interests = {};
+    for (const row of interestRows) {
+      for (const i of row.surveyInterests) interests[i] = (interests[i] || 0) + 1;
+    }
+
+    res.json({
+      totalUsers,
+      onlineNow,
+      activeListings,
+      pendingListings,
+      survey: {
+        answered: interestRows.length,
+        roles: Object.fromEntries(roleGroups.map((g) => [g.surveyRole, g._count._all])),
+        sources: Object.fromEntries(sourceGroups.map((g) => [g.surveySource, g._count._all])),
+        interests,
+      },
+    });
+  } catch (error) {
+    console.error('Admin: statistikani yuklashda xatolik:', error);
+    res.status(500).json({ error: 'Statistikani yuklashda xatolik yuz berdi' });
+  }
+});
+
+/**
  * GET /users?q=...
  * Foydalanuvchilar ro'yxati (ism/telefon bo'yicha qidiruv bilan).
  */
@@ -71,6 +131,7 @@ router.get('/users', async (req, res) => {
         username: true,
         phone: true,
         aiPlan: true,
+        aiPlanExpiresAt: true,
         aiUsageCount: true,
         isVerified: true,
         aiImagesUsed: true,
@@ -102,7 +163,10 @@ router.get('/users', async (req, res) => {
 
 /**
  * PUT /users/:id/plan
- * Foydalanuvchi AI tarifini o'zgartirish. Body: { plan: 'STANDARD' | 'PRO' | 'PREMIUM' }
+ * Foydalanuvchi AI tarifini/obunasini o'zgartirish.
+ * Body: { plan: 'STANDARD' | 'PRO' | 'PREMIUM', days?: number }
+ * days berilsa (1..3650) — obuna muddati bugundan boshlab hisoblanadi va
+ * aiPlanExpiresAt ga saqlanadi. STANDARD tanlansa muddat tozalanadi.
  */
 router.put('/users/:id/plan', async (req, res) => {
   try {
@@ -116,10 +180,20 @@ router.put('/users/:id/plan', async (req, res) => {
         .json({ error: "Tarif faqat 'STANDARD', 'PRO' yoki 'PREMIUM' bo'lishi mumkin" });
     }
 
+    // Obuna muddati (kunlarda) — faqat pullik tariflar uchun
+    let aiPlanExpiresAt = null;
+    if (plan !== 'STANDARD' && req.body?.days !== undefined && req.body?.days !== null) {
+      const days = parseInt(req.body.days);
+      if (isNaN(days) || days < 1 || days > 3650) {
+        return res.status(400).json({ error: "Obuna muddati 1 dan 3650 kungacha bo'lishi kerak" });
+      }
+      aiPlanExpiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    }
+
     const user = await prisma.user.update({
       where: { id },
-      data: { aiPlan: plan },
-      select: { id: true, firstName: true, phone: true, aiPlan: true },
+      data: { aiPlan: plan, aiPlanExpiresAt },
+      select: { id: true, firstName: true, phone: true, aiPlan: true, aiPlanExpiresAt: true },
     });
 
     res.json({ ok: true, user });
@@ -285,6 +359,87 @@ router.post('/reports/:id/reply', async (req, res) => {
     }
     console.error('Admin: shikoyatga javob berishda xatolik:', error);
     res.status(500).json({ error: 'Javob yuborishda xatolik yuz berdi' });
+  }
+});
+
+// ──────────────────── E'lonlar moderatsiyasi (Animal.status) ────────────────────
+
+const ANIMAL_OWNER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  username: true,
+  phone: true,
+  avatarUrl: true,
+  isVerified: true,
+};
+
+/**
+ * GET /animals?status=PENDING|ACTIVE|REJECTED
+ * Moderatsiya ro'yxati (yangi e'lonlar birinchi) + kutilayotganlar soni.
+ */
+router.get('/animals', async (req, res) => {
+  try {
+    const status = ['PENDING', 'ACTIVE', 'REJECTED'].includes(req.query.status)
+      ? req.query.status
+      : 'PENDING';
+    const [data, pendingCount] = await Promise.all([
+      prisma.animal.findMany({
+        where: { status },
+        orderBy: { createdAt: status === 'PENDING' ? 'asc' : 'desc' },
+        take: 200,
+        include: { user: { select: ANIMAL_OWNER_SELECT } },
+      }),
+      prisma.animal.count({ where: { status: 'PENDING' } }),
+    ]);
+    res.json({ data, pendingCount });
+  } catch (error) {
+    console.error("Admin: moderatsiya e'lonlarini yuklashda xatolik:", error);
+    res.status(500).json({ error: "E'lonlarni yuklashda xatolik yuz berdi" });
+  }
+});
+
+/**
+ * PUT /animals/:id/status
+ * E'lonni qabul qilish yoki rad etish. Body: { status: 'ACTIVE' | 'REJECTED' }
+ * Natija egasiga push orqali bildiriladi.
+ */
+router.put('/animals/:id/status', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Noto'g'ri ID format" });
+
+    const status = req.body?.status;
+    if (!['ACTIVE', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: "Status faqat 'ACTIVE' yoki 'REJECTED' bo'lishi mumkin" });
+    }
+
+    const animal = await prisma.animal.findUnique({ where: { id }, select: { id: true, status: true, title: true, userId: true } });
+    if (!animal || animal.status === 'DELETED') {
+      return res.status(404).json({ error: "E'lon topilmadi" });
+    }
+
+    const updated = await prisma.animal.update({
+      where: { id },
+      data: { status },
+      include: { user: { select: ANIMAL_OWNER_SELECT } },
+    });
+
+    // Egasiga xabar (push bo'lmasa jimgina o'tadi)
+    sendPushToUser(animal.userId, {
+      title: status === 'ACTIVE' ? "E'loningiz tasdiqlandi ✅" : "E'loningiz rad etildi",
+      body:
+        status === 'ACTIVE'
+          ? `"${animal.title}" endi saytda ko'rinmoqda.`
+          : `"${animal.title}" moderatsiyadan o'tmadi. Ma'lumotlarni tekshirib, qayta joylang.`,
+      url: '/',
+      tag: `moderation-${animal.id}`,
+    }).catch(() => {});
+
+    res.json({ ok: true, animal: updated });
+  } catch (error) {
+    console.error("Admin: e'lon statusini o'zgartirishda xatolik:", error);
+    res.status(500).json({ error: "E'lon statusini o'zgartirishda xatolik yuz berdi" });
   }
 });
 

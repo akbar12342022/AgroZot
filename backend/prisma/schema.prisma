@@ -16,6 +16,7 @@ model User {
   phone        String?   @unique
   avatarUrl    String?
   aiPlan       String    @default("STANDARD") // AI tarif: STANDARD (bepul, 3 savol) | PRO | PREMIUM
+  aiPlanExpiresAt DateTime? // pullik obuna qachongacha amal qiladi (admin kunlar beradi); muddati o'tgach STANDARDga qaytadi
   aiUsageCount Int       @default(0) // jami berilgan AI savollar soni (STANDARD limiti shu bo'yicha)
   isVerified   Boolean   @default(false) // Admin tasdiqlagan profil (ko'k belgi)
   isSupport    Boolean   @default(false) // "Qo'llab-quvvatlash (Admin)" maxsus akkaunti
@@ -53,7 +54,9 @@ model Animal {
   weight      String?
   vaccinated  Boolean?
   attributes  Json?
-  status      String   @default("ACTIVE")
+  // Moderatsiya: PENDING (admin ko'rigini kutmoqda) | ACTIVE (tasdiqlangan, saytda)
+  // | REJECTED (rad etilgan) | DELETED (egasi o'chirgan)
+  status      String   @default("PENDING")
   userId      Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

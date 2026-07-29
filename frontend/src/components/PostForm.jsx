@@ -7,6 +7,11 @@ import { API_URL } from '../api/client';
 
 const COLUMN_KEYS = ['breed', 'age', 'gender', 'weight', 'vaccinated'];
 
+// Erkak jinsli hayvon (buzoq, buqa, qo'chqor, ayg'ir...) sut bermaydi —
+// jins shulardan biri tanlansa sutga oid maydonlar butunlay yashiriladi
+const MALE_GENDERS = ['Erkak', "Ayg'ir"];
+const MILK_FIELD_KEYS = ['milkPerDay'];
+
 /** Select atrofidagi o'q belgisi (komponentdan tashqarida — remount bo'lmasligi uchun) */
 const SelectWrap = ({ children }) => (
   <div className="relative">
@@ -74,8 +79,22 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
   const districts = useMemo(() => REGIONS_DATA[region] || [], [region]);
   const CatIcon = useMemo(() => CATEGORIES.find((c) => c.id === category)?.icon, [category]);
 
+  // Jins "Erkak" bo'lsa sut maydonlari ko'rinmaydi va yuborilmaydi
+  const isMaleAnimal = MALE_GENDERS.includes(dynamic.gender);
+  const visibleFields = useMemo(
+    () => fields.filter((f) => !(isMaleAnimal && MILK_FIELD_KEYS.includes(f.key))),
+    [fields, isMaleAnimal]
+  );
+
   const setDynField = (key, value) => {
-    setDynamic((prev) => ({ ...prev, [key]: value }));
+    setDynamic((prev) => {
+      const next = { ...prev, [key]: value };
+      // Erkak jins tanlandi — ilgari kiritilgan sut qiymatini ham tozalaymiz
+      if (key === 'gender' && MALE_GENDERS.includes(value)) {
+        for (const mk of MILK_FIELD_KEYS) delete next[mk];
+      }
+      return next;
+    });
   };
 
   const clearError = (key) => setErrors((prev) => ({ ...prev, [key]: undefined }));
@@ -136,9 +155,10 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
         .filter(Boolean);
 
       // 2. Dinamik maydonlarni ustun/attributes ga ajratish
+      // (faqat ko'rinadigan maydonlar — erkak hayvonda sut maydoni yuborilmaydi)
       const columns = {};
       const attributes = {};
-      for (const f of fields) {
+      for (const f of visibleFields) {
         const val = dynamic[f.key];
         if (val === undefined || val === '' || val === null) continue;
         const parsed = f.type === 'number' ? Number(val) : val;
@@ -200,9 +220,10 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
         >
           <CheckCircle2 size={44} className="text-brand-green" />
         </motion.div>
-        <h2 className="text-xl font-extrabold text-brand mb-2">E'lon joylandi! 🎉</h2>
+        <h2 className="text-xl font-extrabold text-brand mb-2">E'lon qabul qilindi! 🎉</h2>
         <p className="text-[13px] text-slate-500 mb-8 leading-relaxed max-w-xs">
-          E'loningiz muvaffaqiyatli joylandi va endi barcha foydalanuvchilarga ko'rinadi.
+          E'loningiz moderatsiyaga yuborildi — administrator tekshirib tasdiqlagach, saytda barcha
+          foydalanuvchilarga ko'rinadi.
         </p>
         <div className="flex gap-2.5 w-full max-w-sm">
           <button
@@ -461,7 +482,7 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            {fields
+            {visibleFields
               .filter((f) => f.type !== 'toggle')
               .map((f) => (
                 <div key={f.key} className={f.type === 'select' && f.options?.length > 6 ? 'col-span-2' : ''}>
@@ -495,7 +516,7 @@ export default function PostForm({ editItem, onCreated, onEditSaved, onCancelEdi
               ))}
           </div>
           <div className="space-y-2.5 mt-2.5">
-            {fields
+            {visibleFields
               .filter((f) => f.type === 'toggle')
               .map((f) => (
                 <button

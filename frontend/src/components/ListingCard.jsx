@@ -21,6 +21,23 @@ export default function ListingCard({ item, isBookmarked, onBookmark, onSelect }
           onError={(e) => imgFallback(e, item.category)}
         />
 
+        {/* Moderatsiya holati — faqat egasining profilida ko'rinadi
+            (bosh sahifada hamma e'lon ACTIVE bo'lgani uchun belgi chiqmaydi) */}
+        {item.status === 'PENDING' && (
+          <div className="absolute bottom-2 left-2.5 z-10">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/90 text-white backdrop-blur-sm shadow">
+              ⏳ Moderatsiyada
+            </span>
+          </div>
+        )}
+        {item.status === 'REJECTED' && (
+          <div className="absolute bottom-2 left-2.5 z-10">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-500/90 text-white backdrop-blur-sm shadow">
+              ✕ Rad etilgan
+            </span>
+          </div>
+        )}
+
         {/* Yuqori-chap belgi */}
         {item.isTop && (
           <div className="absolute top-2.5 left-2.5 z-10">

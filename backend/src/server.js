@@ -300,6 +300,12 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Keep-alive muddatini brauzernikidan uzun qilamiz — aks holda brauzer server
+// allaqachon yopgan (default 5s) ulanishni qayta ishlatib, so'rov 15-20s osilib qoladi.
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
 server.listen(PORT, () => {
   console.log(`Server ${PORT}-portda ishga tushdi (HTTP + Socket.IO).`);
   // "Qo'llab-quvvatlash (Admin)" akkauntini tayyorlab qo'yamiz (best-effort)

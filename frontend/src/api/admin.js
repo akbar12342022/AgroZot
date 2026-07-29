@@ -11,11 +11,29 @@ export const adminPing = (key) => request('/api/admin/ping', withKey(key));
 export const adminUsers = (key, q = '') =>
   request(`/api/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`, withKey(key));
 
-/** Foydalanuvchi AI tarifini o'zgartirish */
-export const adminSetPlan = (key, userId, plan) =>
+/** Dashboard statistikasi (foydalanuvchilar, onlayn, e'lonlar, so'rovnoma tahlili) */
+export const adminStats = (key) => request('/api/admin/stats', withKey(key));
+
+/**
+ * Foydalanuvchi AI tarifini/obunasini o'zgartirish.
+ * days berilsa — obuna shu kundan boshlab days kunga amal qiladi.
+ */
+export const adminSetPlan = (key, userId, plan, days = null) =>
   request(`/api/admin/users/${userId}/plan`, {
     method: 'PUT',
-    body: { plan },
+    body: days ? { plan, days } : { plan },
+    ...withKey(key),
+  });
+
+/** Moderatsiya: e'lonlar ro'yxati (status: 'PENDING' | 'ACTIVE' | 'REJECTED') */
+export const adminAnimals = (key, status = 'PENDING') =>
+  request(`/api/admin/animals?status=${status}`, withKey(key));
+
+/** Moderatsiya: e'lonni qabul qilish (ACTIVE) yoki rad etish (REJECTED) */
+export const adminSetAnimalStatus = (key, animalId, status) =>
+  request(`/api/admin/animals/${animalId}/status`, {
+    method: 'PUT',
+    body: { status },
     ...withKey(key),
   });
 

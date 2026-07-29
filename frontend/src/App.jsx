@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Bot, Send, Trash2, Loader2, WifiOff, ImagePlus, X, Lock, Sparkles, Moon, Sun } from 'lucide-react';
+import { Search, Bot, Send, Trash2, Loader2, WifiOff, ImagePlus, X, Lock, Sparkles, Moon, Sun, Briefcase } from 'lucide-react';
 
 // Komponentlar
 import ListingCard from './components/ListingCard';
@@ -25,6 +25,10 @@ import CategoryRail from './components/CategoryRail';
 import SiteFooter from './components/SiteFooter';
 import AIRoot from './ai/AIRoot';
 import AIPersona from './ai/AIPersona';
+import { useAI } from './ai/AIContext';
+import ServicesTab from './services/ServicesTab';
+import ProviderForm from './services/ProviderForm';
+import { MOCK_PROVIDERS, loadSavedProviders, saveProviders } from './services/servicesData';
 
 // Hooklar, API va ma'lumotlar
 import { useAnimals } from './hooks/useAnimals';
@@ -37,7 +41,25 @@ import { isLoggedIn, currentUser, logout } from './api/auth';
 import { subscribeToPush } from './api/push';
 import { useI18n } from './i18n';
 
+// Bosh sahifa kategoriya qatoriga qo'shiladigan maxsus "Xizmatlar" bandi —
+// filtr emas, bosilganda #services sahifasi ochiladi
+const SERVICES_CATEGORY = { id: 'services', icon: Briefcase, label: 'Xizmatlar' };
+
 const CHAT_STORAGE_KEY = 'agrozot_ai_chat';
+
+// Bepul AI savollari limiti — har bir yuborilgan savolda 1 taga kamayadi va
+// localStorage'da saqlanadi (sahifa yangilanganda ham eslab qolinadi)
+const AI_FREE_LIMIT_KEY = 'ai_free_limit';
+const AI_FREE_LIMIT = 3;
+
+const readFreeLimit = () => {
+  try {
+    const v = parseInt(localStorage.getItem(AI_FREE_LIMIT_KEY), 10);
+    return Number.isFinite(v) ? Math.max(0, Math.min(v, AI_FREE_LIMIT)) : AI_FREE_LIMIT;
+  } catch {
+    return AI_FREE_LIMIT;
+  }
+};
 const DEFAULT_SUGGESTIONS = [
   'Sigir emlash jadvali qanday?',
   'Qoramol narxi qancha?',
@@ -59,6 +81,46 @@ function MainApp({ user, onLogout, showToast, toast }) {
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [pendingChat, setPendingChat] = useState(null); // e'londan ochilgan shaxsiy suhbat
   const [unreadTotal, setUnreadTotal] = useState(0); // navbar chat badge
+
+  // ── Xizmatlar ekotizimi ──
+  // Provayderlar: mock ro'yxat + foydalanuvchi yuborgan arizalar (localStorage).
+  const [providers, setProviders] = useState(() => [...loadSavedProviders(), ...MOCK_PROVIDERS]);
+  const [providerFormOpen, setProviderFormOpen] = useState(false);
+  const [providerFormType, setProviderFormType] = useState(null); // oldindan tanlangan yo'nalish
+
+  // Xizmat formasini ochish — profil kartochkalaridan yo'nalish bilan keladi
+  const openProviderForm = useCallback((type = null) => {
+    setProviderFormType(typeof type === 'string' ? type : null);
+    setProviderFormOpen(true);
+  }, []);
+  // "/services sahifasi" — hash orqali (#services): brauzer orqaga tugmasi ham ishlaydi
+  const [servicesOpen, setServicesOpen] = useState(() => window.location.hash === '#services');
+
+  useEffect(() => {
+    const onHash = () => setServicesOpen(window.location.hash === '#services');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  const openServices = () => {
+    window.location.hash = 'services';
+  };
+  const closeServices = useCallback(() => {
+    setServicesOpen(false);
+    if (window.location.hash === '#services') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  const addProvider = (p) => {
+    setProviders((prev) => {
+      const next = [p, ...prev];
+      // Faqat foydalanuvchi qo'shganlarini saqlaymiz (mocklar kodda turadi);
+      // blob: rasm URL sahifa yangilanganda o'ladi — saqlashda olib tashlanadi
+      saveProviders(next.filter((x) => String(x.id).startsWith('u')).map((x) => ({ ...x, photo: null })));
+      return next;
+    });
+  };
 
   // Jami o'qilmagan xabarlar sonini yangilash (navbar badge uchun)
   const refreshUnread = useCallback(() => {
@@ -104,6 +166,21 @@ function MainApp({ user, onLogout, showToast, toast }) {
   // ── AI tarif holati ──
   const [aiAccessInfo, setAiAccessInfo] = useState(null); // {plan, imageLimit, remainingImages, contact}
   const [showPricing, setShowPricing] = useState(false);
+
+  // ── Bepul savollar limiti (localStorage: 'ai_free_limit') ──
+  // Har bir savolda 1 taga kamayadi; 0 ga yetganda input bloklanadi va
+  // PremiumAIModal (openPaywall) ochiladi.
+  const { openPaywall } = useAI();
+  const [freeQuestionsLeft, setFreeQuestionsLeft] = useState(readFreeLimit);
+  useEffect(() => {
+    try {
+      localStorage.setItem(AI_FREE_LIMIT_KEY, String(freeQuestionsLeft));
+    } catch {
+      /* ignore */
+    }
+  }, [freeQuestionsLeft]);
+
+  const isPaidPlan = aiAccessInfo?.plan === 'PRO' || aiAccessInfo?.plan === 'PREMIUM';
 
   useEffect(() => {
     let alive = true;
@@ -163,6 +240,20 @@ function MainApp({ user, onLogout, showToast, toast }) {
     const imageUrl = pendingImage?.url;
     if ((!userMsg && !imageUrl) || isAiThinking) return;
 
+    // Bepul limit allaqachon tugagan — savol yuborilmaydi, darhol Premium oynasi
+    if (!isPaidPlan && freeQuestionsLeft <= 0) {
+      openPaywall();
+      return;
+    }
+
+    // Har bir yuborilgan savol bepul limitni 1 taga kamaytiradi (localStorage'da saqlanadi)
+    let reachedZero = false;
+    if (!isPaidPlan) {
+      const next = Math.max(0, freeQuestionsLeft - 1);
+      setFreeQuestionsLeft(next);
+      reachedZero = next === 0;
+    }
+
     // Suhbat tarixi (API uchun rol formatida)
     const history = messages
       .filter((m) => !m.error)
@@ -193,16 +284,21 @@ function MainApp({ user, onLogout, showToast, toast }) {
           questionLimit: data.questionLimit ?? null,
           remainingQuestions: data.remainingQuestions ?? null,
         }));
+        // Server kamroq limit qaytarsa — lokal hisoblagichni unga moslaymiz
+        if (data.plan === 'STANDARD' && data.remainingQuestions != null) {
+          setFreeQuestionsLeft((n) => Math.min(n, Math.max(0, data.remainingQuestions)));
+        }
       }
     } catch (err) {
       if (err.code === 'LIMIT_REACHED') {
+        setFreeQuestionsLeft(0);
         setAiAccessInfo((prev) => ({
           ...(prev || {}),
           plan: 'STANDARD',
           remainingQuestions: 0,
           contact: err.data?.contact || prev?.contact,
         }));
-        setShowPricing(true);
+        openPaywall();
       } else if (err.code === 'IMAGE_LIMIT') {
         setAiAccessInfo((prev) => (prev ? { ...prev, remainingImages: 0 } : prev));
       }
@@ -216,6 +312,8 @@ function MainApp({ user, onLogout, showToast, toast }) {
       ]);
     } finally {
       setIsAiThinking(false);
+      // Limit aynan shu savolda 0 ga yetdi — zudlik bilan Premium (paywall) oynasi
+      if (reachedZero) openPaywall();
     }
   };
 
@@ -230,26 +328,33 @@ function MainApp({ user, onLogout, showToast, toast }) {
     }
   };
 
-  // STANDARD (bepul) tarifda 3 ta savol tugagach AI bo'limi yopiladi
+  // Bepul tarifda 3 ta savol tugagach AI bo'limi yopiladi (lokal hisoblagich
+  // asosiy manba; server ham 0 desa — baribir yopiq)
   const aiLocked =
-    aiAccessInfo?.plan === 'STANDARD' && aiAccessInfo?.remainingQuestions === 0;
+    (!isPaidPlan && freeQuestionsLeft <= 0) ||
+    (aiAccessInfo?.plan === 'STANDARD' && aiAccessInfo?.remainingQuestions === 0);
+
+  // Oxirgi (3-chi) savol javobi yuklanayotganda ekran darhol almashmasin —
+  // javob kelgach lock ekrani + PremiumAIModal birga ochiladi
+  const showAiLock = aiLocked && !isAiThinking;
 
   // Foydalanuvchi hali birorta ham xabar yozmagan bo'lsa — ChatGPT uslubidagi
   // markazlashgan kutib olish ekrani ko'rsatiladi (boshlang'ich AI salomi hisobga olinmaydi)
   const chatStarted = messages.some((m) => m.sender === 'user');
 
   const handleTabChange = (tab) => {
-    // Bepul savollari tugagan foydalanuvchi AI bo'limini ochsa — tariflar oynasi
+    // Bepul savollari tugagan foydalanuvchi AI bo'limini ochsa — zudlik bilan
+    // PremiumAIModal (paywall) ochiladi
     if (tab === 'ai' && aiLocked) {
-      setShowPricing(true);
+      openPaywall();
       return;
     }
     if (editItem) setEditItem(null);
+    if (servicesOpen) closeServices(); // boshqa tabga o'tilsa Xizmatlar sahifasi yopiladi
     setActiveTab(tab);
   };
 
-  // AI bo'limida turganda limit tugab qolsa ham oyna ochiq turadi
-  const pricingOpen = showPricing || (activeTab === 'ai' && aiLocked);
+  const pricingOpen = showPricing;
   const closePricing = () => {
     setShowPricing(false);
     if (activeTab === 'ai' && aiLocked) setActiveTab('home');
@@ -292,7 +397,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
       <Toast toast={toast} />
 
       {/* ═══ Yopishqoq sarlavha (bosh sahifada) — logotip, rejim, hudud ═══ */}
-      {activeTab === 'home' && (
+      {activeTab === 'home' && !servicesOpen && (
         <div className="glass-header sticky top-0 z-30 border-b border-slate-200 shrink-0">
           <div className="flex items-center justify-between gap-4 px-4 py-3">
             <BrandLogo className="shrink-0" />
@@ -348,8 +453,26 @@ function MainApp({ user, onLogout, showToast, toast }) {
         className="flex-1 overflow-y-auto scrollbar-hide pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
       >
         <AnimatePresence mode="wait">
+          {/* ── Xizmatlar sahifasi (#services) ── */}
+          {activeTab === 'home' && servicesOpen && (
+            <motion.div
+              key="services"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 40 }}
+              transition={{ duration: 0.25 }}
+              className="min-h-full"
+            >
+              <ServicesTab
+                providers={providers}
+                onBack={closeServices}
+                onBecomeProvider={openProviderForm}
+              />
+            </motion.div>
+          )}
+
           {/* ── Bosh sahifa ── */}
-          {activeTab === 'home' && (
+          {activeTab === 'home' && !servicesOpen && (
             <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {/* Hero — katta sarlavha va qidiruv */}
               <HeroSection
@@ -359,11 +482,11 @@ function MainApp({ user, onLogout, showToast, toast }) {
                 sentinelRef={setHeroSentinel}
               />
 
-              {/* Kategoriyalar (doira ikonkalar, yopishqoq) */}
+              {/* Kategoriyalar (doira ikonkalar, yopishqoq) + maxsus "Xizmatlar" bandi */}
               <CategoryRail
-                categories={CATEGORIES}
+                categories={[...CATEGORIES, SERVICES_CATEGORY]}
                 activeCategory={activeCategory}
-                onSelect={setActiveCategory}
+                onSelect={(id) => (id === 'services' ? openServices() : setActiveCategory(id))}
               />
 
               {/* Natijalar sarlavhasi */}
@@ -459,7 +582,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
           )}
 
           {/* ── AI yordamchi: bepul limit tugagan holat ── */}
-          {activeTab === 'ai' && aiLocked && (
+          {activeTab === 'ai' && showAiLock && (
             <motion.div
               key="ai-locked"
               initial={{ opacity: 0 }}
@@ -490,7 +613,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
           )}
 
           {/* ── AI yordamchi ── */}
-          {activeTab === 'ai' && !aiLocked && (
+          {activeTab === 'ai' && !showAiLock && (
             <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full">
               <div className="flex items-center gap-3 p-4 border-b border-slate-200">
                 <div className="w-10 h-10 rounded-full bg-brand-green/10 border border-brand-green/40 flex items-center justify-center text-brand-green-dark">
@@ -514,11 +637,11 @@ function MainApp({ user, onLogout, showToast, toast }) {
                     <span className="w-1.5 h-1.5 rounded-full bg-brand-green" />
                     {aiAccessInfo?.plan === 'PREMIUM'
                       ? 'Cheksiz suhbat va rasm tahlili'
-                      : isPro && aiAccessInfo?.remainingImages != null
-                        ? `Bugun ${aiAccessInfo.remainingImages} ta rasm tahlili qoldi`
-                        : aiAccessInfo?.plan === 'STANDARD' && aiAccessInfo?.remainingQuestions != null
-                          ? `Bepul: ${aiAccessInfo.remainingQuestions} ta savol qoldi`
-                          : 'Har qanday savolga javob beradi'}
+                      : isPro
+                        ? aiAccessInfo?.remainingImages != null
+                          ? `Bugun ${aiAccessInfo.remainingImages} ta rasm tahlili qoldi`
+                          : 'Har qanday savolga javob beradi'
+                        : `Bepul: ${freeQuestionsLeft} ta savol qoldi`}
                   </p>
                 </div>
                 {messages.length > 1 && (
@@ -666,12 +789,19 @@ function MainApp({ user, onLogout, showToast, toast }) {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder={pendingImage ? 'Rasm haqida savol (ixtiyoriy)...' : 'Istalgan savolni yozing...'}
-                  className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-brand placeholder:text-slate-400 focus:outline-none focus:border-brand-green transition-colors"
+                  disabled={aiLocked}
+                  placeholder={
+                    aiLocked
+                      ? 'Bepul limit tugadi — Premiumga o\'ting'
+                      : pendingImage
+                        ? 'Rasm haqida savol (ixtiyoriy)...'
+                        : 'Istalgan savolni yozing...'
+                  }
+                  className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-brand placeholder:text-slate-400 focus:outline-none focus:border-brand-green transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   onClick={() => sendMessage()}
-                  disabled={isAiThinking || (!chatInput.trim() && !pendingImage)}
+                  disabled={aiLocked || isAiThinking || (!chatInput.trim() && !pendingImage)}
                   className="w-10 h-10 rounded-xl bg-brand-green hover:bg-brand-green-dark disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-white transition-colors active:scale-95"
                 >
                   <Send size={16} />
@@ -712,6 +842,7 @@ function MainApp({ user, onLogout, showToast, toast }) {
             <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ProfileTab
                 savedItems={savedItems}
+                onBecomeProvider={openProviderForm}
                 refreshKey={profileRefreshKey}
                 onEdit={handleEditListing}
                 onOpenListing={setSelectedListing}
@@ -748,6 +879,15 @@ function MainApp({ user, onLogout, showToast, toast }) {
       <AnimatePresence>
         {pricingOpen && <PricingModal contact={aiAccessInfo?.contact} onClose={closePricing} />}
       </AnimatePresence>
+
+      {/* ═══ Xizmat ko'rsatuvchi bo'lish arizasi ═══ */}
+      <ProviderForm
+        open={providerFormOpen}
+        onClose={() => setProviderFormOpen(false)}
+        onSubmit={addProvider}
+        userName={user?.name || user?.firstName}
+        initialType={providerFormType}
+      />
 
       {/* ═══ Pastki navigatsiya ═══ */}
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} unreadTotal={unreadTotal} />

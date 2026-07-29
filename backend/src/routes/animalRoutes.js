@@ -145,14 +145,15 @@ router.get('/:id', async (req, res) => {
 
 /**
  * POST /
- * Yangi e'lon qo'shish
+ * Yangi e'lon qo'shish — avval PENDING (moderatsiya) holatiga tushadi,
+ * admin tasdiqlagachgina (ACTIVE) saytda ko'rinadi.
  */
 router.post('/', auth, async (req, res) => {
   try {
     const validatedData = createAnimalSchema.parse(req.body);
 
     const newAnimal = await prisma.animal.create({
-      data: { ...validatedData, userId: req.userId },
+      data: { ...validatedData, userId: req.userId, status: 'PENDING' },
     });
 
     res.status(201).json(newAnimal);

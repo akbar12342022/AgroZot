@@ -184,8 +184,9 @@ export default function OnboardingSurvey({ onComplete }) {
               {/* ── 0: Salomlashish ── */}
               {step === 0 && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center px-7 overflow-y-auto scrollbar-hide py-8">
-                  {/* Mobilda: intro video (oq fonli versiya) — multiply sahifa foniga singdiradi,
-                      radial parda esa chekkadagi soya/vinyetkalarni eritib yuboradi */}
+                  {/* Mobilda: yangi logo-animatsiya (katakcha foni tozalangan, oq fonli) —
+                      multiply oq fonni sahifa foniga singdiradi ("orqa fon ko'rinmaydi"),
+                      radial parda esa chekkalarni eritib yuboradi */}
                   <motion.div
                     initial={{ opacity: 0, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -193,7 +194,7 @@ export default function OnboardingSurvey({ onComplete }) {
                     className="md:hidden relative w-full max-w-[320px] mb-4"
                   >
                     <video
-                      src="/intro-white.mp4"
+                      src="/intro-logo.mp4"
                       autoPlay
                       loop
                       muted
